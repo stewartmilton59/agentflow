@@ -1,14 +1,12 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 def get_env_var(key, default=None, mandatory=False):
     value = os.environ.get(key)
@@ -18,18 +16,33 @@ def get_env_var(key, default=None, mandatory=False):
         raise ImproperlyConfigured(f"Required environment variable '{key}' is not set.")
     return default
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&_4^2x8@qp*wq(&^8%ub&&=-!k^1(#mr0mqjmh+e9#x$4_vdbp'
 
-DEBUG = True
+# -----------------------------------------------------------------
+# Security
+# -----------------------------------------------------------------
+SECRET_KEY = get_env_var('SECRET_KEY', mandatory=True)
+
+DEBUG = get_env_var('DEBUG', 'False') == 'True'
+
+ALLOWED_HOSTS = get_env_var('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+CSRF_TRUSTED_ORIGINS = get_env_var('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000').split(',')
+
+SECURE_SSL_REDIRECT = get_env_var('SECURE_SSL_REDIRECT', 'False') == 'True'
+SESSION_COOKIE_SECURE = get_env_var('SESSION_COOKIE_SECURE', 'False') == 'True'
+CSRF_COOKIE_SECURE = get_env_var('CSRF_COOKIE_SECURE', 'False') == 'True'
+SECURE_HSTS_SECONDS = int(get_env_var('SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = get_env_var('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False') == 'True'
+SECURE_HSTS_PRELOAD = get_env_var('SECURE_HSTS_PRELOAD', 'False') == 'True'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+X_FRAME_OPTIONS = 'DENY'
 
 # Custom error handlers
 handler400 = 'core.views.bad_request'
 handler403 = 'core.views.permission_denied'
 handler404 = 'core.views.page_not_found'
 handler500 = 'core.views.server_error'
-
-ALLOWED_HOSTS = ['agentflow.pythonanywhere.com']
 
 
 # -----------------------------------------------------------------
@@ -169,8 +182,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Email settings (for development)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email settings
+EMAIL_BACKEND = get_env_var('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = get_env_var('EMAIL_HOST', '')
+EMAIL_PORT = int(get_env_var('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = get_env_var('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = get_env_var('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = get_env_var('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = get_env_var('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+SERVER_EMAIL = get_env_var('SERVER_EMAIL', 'root@localhost')
+ADMINS = [('Admin', get_env_var('ADMIN_EMAIL', ''))] if get_env_var('ADMIN_EMAIL', '') else []
 
 # Session settings
 SESSION_COOKIE_AGE = 28800  # 8 hours

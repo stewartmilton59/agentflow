@@ -21,7 +21,6 @@ urlpatterns = [
     path('inventory/', include('inventory.urls')),
     path('purchases/', include('purchases.urls')),
     path('', include('sales.urls')),
-#    path('chat/', include('chat.urls')),
 ]
 
 if settings.DEBUG:

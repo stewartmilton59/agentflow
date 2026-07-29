@@ -135,7 +135,6 @@ INSTALLED_APPS = [
     'inventory',
     'purchases',
     'sales',
-    # 'chat',
 ]
 
 MIDDLEWARE = [
