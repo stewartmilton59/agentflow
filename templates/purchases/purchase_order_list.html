@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Purchase Orders - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-shopping-cart text-primary me-2"></i>Purchase Orders
+            </h2>
+            <p class="text-muted">Manage product procurement and stock</p>
+        </div>
+        <div>
+            <!-- FIXED: Changed from 'purchase_create' to 'purchase_order_create' -->
+            <a href="{% url 'purchases:purchase_order_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i>New Purchase Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Total Orders</h6>
+                            <h3 class="mb-0">{{ orders.paginator.count }}</h3>
+                        </div>
+                        <i class="fas fa-shopping-cart fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Draft</h6>
+                            <h3 class="mb-0">{{ draft_count|default:"0" }}</h3>
+                        </div>
+                        <i class="fas fa-file-alt fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Completed</h6>
+                            <h3 class="mb-0">{{ completed_count|default:"0" }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Total Spent</h6>
+                            <h3 class="mb-0">TZS {{ total_spent|default:"0"|floatformat:0|intcomma }}</h3>
+                        </div>
+                        <i class="fas fa-dollar-sign fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="PO Number or Product..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search me-1"></i> Filter
+                </button>
+                <a href="{% url 'purchases:purchase_order_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-undo me-1"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover datatable">
+                    <thead>
+                        <tr>
+                            <th>PO Number</th>
+                            <th>Order Date</th>
+                            <th>Status</th>
+                            <th>Total Amount</th>
+                            <th>Created By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>
+                                <strong>{{ order.po_number }}</strong>
+                            </td>
+                            <td>{{ order.order_date|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if order.status == 'completed' %}
+                                    <span class="status-badge status-active">
+                                        <i class="fas fa-check-circle me-1"></i>Completed
+                                    </span>
+                                {% elif order.status == 'cancelled' %}
+                                    <span class="status-badge status-inactive">
+                                        <i class="fas fa-times-circle me-1"></i>Cancelled
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge" style="background:#fed7aa;color:#9b2c1d;">
+                                        <i class="fas fa-clock me-1"></i>{{ order.get_status_display }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>TZS {{ order.total_amount|floatformat:2|intcomma }}</td>
+                            <td>
+                                {% if order.created_by %}
+                                    {{ order.created_by.get_full_name|default:order.created_by.username }}
+                                {% else %}
+                                    System
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'purchases:purchase_order_detail' order.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if order.status == 'draft' %}
+                                <a href="{% url 'purchases:purchase_order_cancel' order.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Cancel this order?')">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">No purchase orders found.</p>
+                                <a href="{% url 'purchases:purchase_order_create' %}" class="btn btn-primary mt-3">
+                                    <i class="fas fa-plus-circle me-2"></i>Create First Order
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if orders.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if orders.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ orders.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in orders.paginator.page_range %}
+                        {% if orders.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > orders.number|add:'-3' and num < orders.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if orders.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ orders.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

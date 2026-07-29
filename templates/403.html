@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}403 - Access Denied{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row min-vh-100 align-items-center">
+        <div class="col-md-6 mx-auto text-center">
+            <div class="error-page">
+                <div class="error-icon mb-4">
+                    <i class="fas fa-lock fa-5x text-danger"></i>
+                </div>
+                <h1 class="display-1 fw-bold text-danger">403</h1>
+                <h2 class="mb-4">Access Denied</h2>
+                <p class="text-muted mb-4">
+                    Sorry, you don't have permission to access this page.
+                    Please contact your administrator if you believe this is an error.
+                </p>
+                <div class="error-actions">
+                    <a href="{% url 'sales:pos_view' %}" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i>Back to POS
+                    </a>
+                    <button onclick="history.back()" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Go Back
+                    </button>
+                </div>
+                <div class="mt-4">
+                    <p class="small text-muted">
+                        Error Code: 403 | Forbidden<br>
+                        You do not have the required permissions to access this resource.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-page {
+        padding: 40px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .error-icon i {
+        color: #ef4444;
+    }
+    .display-1 {
+        font-size: 6rem;
+        font-weight: 700;
+    }
+    .error-actions .btn {
+        margin: 0 5px;
+        padding: 10px 25px;
+    }
+</style>
+{% endblock %}

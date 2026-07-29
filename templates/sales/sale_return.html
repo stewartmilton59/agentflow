@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Process Return - {{ sale.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Process Return for Invoice #{{ sale.invoice_number }}</h3>
+                    <div class="card-tools">
+                        <a href="{% url 'sales:sale_detail' sale.id %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Sale
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Sale Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Invoice Number:</th>
+                                    <td>{{ sale.invoice_number }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Sale Date:</th>
+                                    <td>{{ sale.sale_date|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Customer:</th>
+                                    <td>{{ sale.get_display_customer_name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Total Amount:</th>
+                                    <td>TZS {{ sale.total_amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Return Instructions:
+                                <ul class="mb-0 mt-2">
+                                    <li>Enter quantities to return for each item</li>
+                                    <li>Select reason for return</li>
+                                    <li>Add any additional notes</li>
+                                    <li>Submit the return request</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {{ form|crispy }}
+
+                        <h5 class="mt-4">Items to Return</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Batch Number</th>
+                                        <th>Expiry Date</th>
+                                        <th>Original Quantity</th>
+                                        <th>Unit Price</th>
+                                        <th>Return Quantity</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in sale.items.all %}
+                                    <tr>
+                                        <td>
+                                            {{ item.product.name }}
+                                            {% if item.product.sku %}
+                                                <br><small class="text-muted">SKU: {{ item.product.sku }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.batch_number }}</td>
+                                        <td>
+                                            {% if item.expiry_date %}
+                                                {{ item.expiry_date|date:"Y-m-d" }}
+                                                {% if item.expiry_date < now %}
+                                                    <span class="badge bg-danger">Expired</span>
+                                                {% endif %}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>TZS {{ item.unit_price|floatformat:2|intcomma }}</td>
+                                        <td>
+                                            <input type="number"
+                                                   name="return_quantity_{{ item.id }}"
+                                                   class="form-control return-quantity"
+                                                   style="width: 100px;"
+                                                   min="0"
+                                                   max="{{ item.quantity }}"
+                                                   value="0"
+                                                   data-max="{{ item.quantity }}">
+                                        </td>
+                                        <td>
+                                            <select name="reason_{{ item.id }}" class="form-control">
+                                                <option value="">Select reason...</option>
+                                                <option value="damaged">Damaged Product</option>
+                                                <option value="wrong_item">Wrong Item</option>
+                                                <option value="expired">Expired</option>
+                                                <option value="customer_request">Customer Request</option>
+                                                <option value="quality_issue">Quality Issue</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="alert alert-warning">
+                                    <strong>Note:</strong>
+                                    <ul>
+                                        <li>Returned items will be added back to inventory</li>
+                                        <li>The sale will be updated to reflect the return</li>
+                                        <li>If all items are returned, the sale will be marked as refunded</li>
+                                        <li>Refund amount will be calculated automatically</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary" onclick="return confirm('Are you sure you want to process this return?')">
+                                <i class="fas fa-undo-alt"></i> Process Return
+                            </button>
+                            <a href="{% url 'sales:sale_detail' sale.id %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Update total return amount dynamically
+    document.querySelectorAll('.return-quantity').forEach(input => {
+        input.addEventListener('change', function() {
+            let totalReturn = 0;
+            document.querySelectorAll('.return-quantity').forEach(qty => {
+                totalReturn += parseInt(qty.value) || 0;
+            });
+
+            if (totalReturn > 0) {
+                $('#total-return-badge').text(totalReturn);
+                $('#total-return-badge').show();
+            } else {
+                $('#total-return-badge').hide();
+            }
+        });
+    });
+
+    // Validate at least one item is selected for return
+    document.querySelector('form').addEventListener('submit', function(e) {
+        let hasReturn = false;
+        document.querySelectorAll('.return-quantity').forEach(qty => {
+            if (parseInt(qty.value) > 0) {
+                hasReturn = true;
+            }
+        });
+
+        if (!hasReturn) {
+            e.preventDefault();
+            alert('Please select at least one item to return.');
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

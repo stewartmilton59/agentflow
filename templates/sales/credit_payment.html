@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block title %}Record Payment - {{ credit.credit_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Record Payment for {{ credit.credit_number }}</h3>
+                    <div class="card-tools">
+                        <a href="{% url 'sales:credit_detail' credit.id %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Credit
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Credit Information:</strong><br>
+                        Customer: {{ credit.get_customer_display }}<br>
+                        Total Credit: TZS {{ credit.credit_amount|floatformat:0|intcomma }}<br>
+                        Amount Paid: TZS {{ credit.amount_paid|floatformat:0|intcomma }}<br>
+                        <strong>Remaining Balance: TZS {{ credit.remaining_balance|floatformat:0|intcomma }}</strong>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Record Payment
+                            </button>
+                            <a href="{% url 'sales:credit_detail' credit.id %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

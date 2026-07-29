@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Cancel Purchase Order - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Cancel Purchase Order
+                </div>
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-shopping-cart fa-4x text-danger mb-3"></i>
+                    <h5>Are you sure you want to cancel this purchase order?</h5>
+                    <p class="text-muted">PO Number: <strong>{{ order.po_number }}</strong></p>
+                    <p class="text-muted">Total Amount: <strong>TZS {{ order.total_amount|floatformat:2|intcomma }}</strong></p>
+
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-check me-1"></i> Yes, Cancel Order
+                        </button>
+                        <a href="{% url 'purchases:purchase_order_detail' order.id %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> No, Go Back
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

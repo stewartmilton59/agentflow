@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Proforma Invoices - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-invoice me-2 text-warning"></i>
+                        Proforma Invoices (Quotations)
+                    </h5>
+                    <a href="{% url 'sales:pos_table' %}" class="btn btn-warning btn-sm text-dark fw-bold">
+                        <i class="fas fa-plus-circle me-1"></i>New Proforma
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- Search Filter -->
+                    <form method="get" class="mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-10">
+                                <input type="text" name="search" class="form-control"
+                                       placeholder="Search by proforma number, customer name or phone..."
+                                       value="{{ request.GET.search|default:'' }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-warning w-100 text-dark fw-bold">
+                                    <i class="fas fa-search me-1"></i>Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Info Banner -->
+                    <div class="alert alert-info d-flex align-items-center mb-4">
+                        <i class="fas fa-info-circle me-2 fa-lg"></i>
+                        <div>
+                            <strong>Proforma Invoices</strong> are quotations that do <strong>not</strong> affect stock.
+                            Convert them to sales when the customer is ready to pay.
+                        </div>
+                    </div>
+
+                    <!-- Proforma Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Proforma #</th>
+                                    <th>Date & Time</th>
+                                    <th>Customer</th>
+                                    <th>Total Amount</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for proforma in proformas %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-warning text-dark fs-6">
+                                            <i class="fas fa-file-invoice me-1"></i>{{ proforma.invoice_number }}
+                                        </span>
+                                    </td>
+                                    <td>{{ proforma.sale_date|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if proforma.customer %}
+                                            <strong>{{ proforma.customer.get_full_name }}</strong><br>
+                                            <small class="text-muted">{{ proforma.customer.phone_number }}</small>
+                                        {% else %}
+                                            <strong>{{ proforma.customer_name|default:"Walk-in Customer" }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold text-warning">
+                                        TZS {{ proforma.total_amount|floatformat:2|intcomma }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {% if proforma.created_by %}
+                                            <i class="fas fa-user me-1"></i>{{ proforma.created_by.get_full_name|default:proforma.created_by.username }}
+                                            {% else %}
+                                             <em>Unknown</em>
+                                             {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <!-- Print Proforma -->
+                                            <a href="{% url 'sales:proforma_receipt' proforma.id %}"
+                                               class="btn btn-outline-warning text-dark fw-bold" title="Print Proforma">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+
+                                            <!-- Convert to Sale -->
+                                            <a href="{% url 'sales:convert_proforma' proforma.id %}"
+                                               class="btn btn-outline-success fw-bold" title="Convert to Sale">
+                                                <i class="fas fa-exchange-alt"></i> Convert
+                                            </a>
+
+                                            <!-- Edit -->
+                                            <a href="{% url 'sales:sale_update' proforma.id %}"
+                                               class="btn btn-outline-primary" title="Edit Proforma">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <!-- Delete -->
+                                            <button type="button" class="btn btn-outline-danger" title="Delete"
+                                                    data-bs-toggle="modal" data-bs-target="#deleteModal{{ proforma.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Delete Modal -->
+                                        <div class="modal fade" id="deleteModal{{ proforma.id }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-danger text-white">
+                                                        <h5 class="modal-title">
+                                                            <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                                                        </h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>Are you sure you want to delete proforma <strong>{{ proforma.invoice_number }}</strong>?</p>
+                                                        <div class="alert alert-warning">
+                                                            <i class="fas fa-info-circle me-2"></i>
+                                                            This proforma has <strong>not</strong> affected stock, so no stock will be restored.
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form method="post" action="{% url 'sales:sale_delete' proforma.id %}">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-danger">
+                                                                <i class="fas fa-trash me-1"></i>Delete Proforma
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <i class="fas fa-file-invoice fa-3x text-muted mb-3 d-block"></i>
+                                        <h5 class="text-muted">No proforma invoices found</h5>
+                                        <p class="text-muted">Create a new proforma from the Point of Sale screen.</p>
+                                        <a href="{% url 'sales:pos_table' %}" class="btn btn-warning text-dark fw-bold">
+                                            <i class="fas fa-plus-circle me-1"></i>Create Proforma
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if proformas.has_other_pages %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if proformas.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ proformas.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in proformas.paginator.page_range %}
+                                {% if proformas.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link bg-warning text-dark border-warning">{{ num }}</span>
+                                </li>
+                                {% elif num > proformas.number|add:'-3' and num < proformas.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if proformas.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ proformas.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

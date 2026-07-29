@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Customer Details - {{ customer.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Customer Information Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-circle me-2"></i>
+                        Customer Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="avatar-circle mb-2">
+                            <i class="fas fa-user fa-3x text-primary"></i>
+                        </div>
+                        <h4>{{ customer.get_full_name }}</h4>
+                        <p class="text-muted">{{ customer.customer_code }}</p>
+                    </div>
+
+                    <hr>
+
+                    <div class="info-row">
+                        <label>Customer Type:</label>
+                        <span class="badge bg-info">{{ customer.get_customer_type_display }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <label>Phone:</label>
+                        <span><i class="fas fa-phone-alt me-1"></i> {{ customer.phone_number }}</span>
+                    </div>
+
+                    {% if customer.phone_number_2 %}
+                    <div class="info-row">
+                        <label>Phone 2:</label>
+                        <span>{{ customer.phone_number_2 }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if customer.email %}
+                    <div class="info-row">
+                        <label>Email:</label>
+                        <span><i class="fas fa-envelope me-1"></i> {{ customer.email }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if customer.address %}
+                    <div class="info-row">
+                        <label>Address:</label>
+                        <span>{{ customer.address }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if customer.tin %}
+                    <div class="info-row">
+                        <label>TIN:</label>
+                        <span>{{ customer.tin }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if customer.fin %}
+                    <div class="info-row">
+                        <label>FIN:</label>
+                        <span>{{ customer.fin }}</span>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="info-row">
+                        <label>Total Spent:</label>
+                        <span class="fw-bold text-success">TZS {{ customer.total_spent|floatformat:2|intcomma }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <label>Loyalty Points:</label>
+                        <span class="fw-bold text-primary">{{ customer.loyalty_points }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <label>Discount:</label>
+                        <span>{{ customer.discount_percent }}%</span>
+                    </div>
+
+                    <div class="info-row">
+                        <label>Credit Limit:</label>
+                        <span>TZS {{ customer.credit_limit|floatformat:2|intcomma }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <label>Current Balance:</label>
+                        <span class="fw-bold {% if customer.current_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                            TZS {{ customer.current_balance|floatformat:2|intcomma }}
+                        </span>
+                    </div>
+
+                    <hr>
+
+                    <div class="info-row">
+                        <label>Status:</label>
+                        {% if customer.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="info-row">
+                        <label>Customer Since:</label>
+                        <span>{{ customer.created_at|date:"d/m/Y" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loyalty Card Card -->
+            {% if loyalty_card %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-id-card me-2"></i>
+                        Loyalty Card
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <h5>{{ loyalty_card.card_number }}</h5>
+                        <div class="mt-2">
+                            <strong>Points Balance:</strong> {{ loyalty_card.points_balance }}<br>
+                            <strong>Points Earned:</strong> {{ loyalty_card.points_earned }}<br>
+                            <strong>Points Redeemed:</strong> {{ loyalty_card.points_redeemed }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-8">
+            <!-- Recent Sales -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Recent Sales
+                    </h5>
+                    <a href="{% url 'sales:sale_list' %}?search={{ customer.phone_number }}" class="btn btn-sm btn-light">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if sales %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Date</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in sales %}
+                                <tr>
+                                    <td>{{ sale.invoice_number }}</span>
+                                    </span>
+                                    <td>{{ sale.sale_date|date:"d/m/Y H:i" }}</span>
+                                    </span>
+                                    <td>TZS {{ sale.total_amount|floatformat:2|intcomma }}</span>
+                                    </span>
+                                    <td>
+                                        {% if sale.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                    </span>
+                                    </span>
+                                    <td>
+                                        <a href="{% url 'sales:sale_detail' sale.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'sales:sale_receipt' sale.id %}" class="btn btn-sm btn-secondary" target="_blank">
+                                            <i class="fas fa-print"></i>
+                                        </a>
+                                    </span>
+                                    </span>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-shopping-cart fa-2x text-muted mb-2"></i>
+                        <p>No sales yet for this customer.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Credit Records -->
+            {% if credit_records %}
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-credit-card me-2"></i>
+                        Outstanding Credits
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Credit #</th>
+                                    <th>Invoice</th>
+                                    <th>Amount</th>
+                                    <th>Paid</th>
+                                    <th>Balance</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for credit in credit_records %}
+                                <tr>
+                                    <td>{{ credit.credit_number }}</span>
+                                    </span>
+                                    <td>{{ credit.sale.invoice_number }}</span>
+                                    </span>
+                                    <td>TZS {{ credit.credit_amount|floatformat:2|intcomma }}</span>
+                                    </span>
+                                    <td>TZS {{ credit.amount_paid|floatformat:2|intcomma }}</span>
+                                    </span>
+                                    <td>
+                                        <strong class="text-danger">TZS {{ credit.remaining_balance|floatformat:2|intcomma }}</strong>
+                                    </span>
+                                    </span>
+                                    <td>
+                                        {% if credit.status == 'pending' %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% elif credit.status == 'partial' %}
+                                            <span class="badge bg-info">Partial</span>
+                                        {% elif credit.status == 'overdue' %}
+                                            <span class="badge bg-danger">Overdue</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Paid</span>
+                                        {% endif %}
+                                    </span>
+                                    </span>
+                                    <td>
+                                        <a href="{% url 'sales:credit_detail' credit.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if credit.status != 'paid' %}
+                                            <a href="{% url 'sales:credit_payment' credit.id %}" class="btn btn-sm btn-success">
+                                                <i class="fas fa-money-bill"></i> Pay
+                                            </a>
+                                        {% endif %}
+                                    </span>
+                                    </span>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .info-row {
+        margin-bottom: 12px;
+    }
+    .info-row label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #6c757d;
+        display: block;
+        margin-bottom: 3px;
+    }
+    .info-row span {
+        font-size: 0.95rem;
+    }
+    .avatar-circle {
+        width: 70px;
+        height: 70px;
+        background-color: #f8f9fa;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .btn-sm {
+        margin: 2px;
+    }
+</style>
+{% endblock %}

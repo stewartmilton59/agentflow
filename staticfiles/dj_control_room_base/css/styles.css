@@ -1,0 +1,322 @@
+/* =============================================================================
+   DJ CONTROL ROOM BASE - Base Panel Styles  (styles.css)
+
+   Styleguide chrome used only by the base panel's own live component showcase.
+   Not intended for downstream panels - they should load design-system.css only.
+
+   Requires design-system.css to be loaded first (via panel_base.html).
+   ============================================================================= */
+
+
+/* =============================================================================
+   3. STYLEGUIDE CHROME
+   Only used by the base panel's own index template.
+   ============================================================================= */
+
+
+/* Horizontal jump-to navigation */
+.dcr-sg-jumpto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dcr-space-xs);
+  padding: var(--dcr-space-sm) 0;
+  margin-bottom: var(--dcr-space-xl);
+  border-bottom: 1px solid var(--dcr-color-border);
+  position: sticky;
+  top: 0;
+  background: var(--dcr-color-bg);
+  z-index: 10;
+}
+
+.dcr-sg-jumpto__label {
+  font-size: var(--dcr-font-size-xs);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--dcr-color-text-muted);
+  padding: 3px var(--dcr-space-xs);
+}
+
+.dcr-sg-jumpto__sep {
+  width: 1px;
+  height: 16px;
+  background: var(--dcr-color-border);
+  margin: 0 var(--dcr-space-xs);
+}
+
+.dcr-sg-jumpto a {
+  font-size: var(--dcr-font-size-sm);
+  color: var(--dcr-color-text-muted);
+  text-decoration: none;
+  padding: 3px var(--dcr-space-sm);
+  border-radius: var(--dcr-radius);
+  border: 1px solid var(--dcr-color-border);
+  white-space: nowrap;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.dcr-sg-jumpto a:hover {
+  color: var(--dcr-color-accent);
+  border-color: var(--dcr-color-accent);
+}
+
+/* Cross-page section navigation - uses dcr-tabs from design-system.css */
+.dcr-sg-topnav {
+  margin-bottom: 0;
+}
+
+/* Tab pane content areas */
+.dcr-sg-tab-pane {
+  padding-top: var(--dcr-space-xl);
+}
+
+/* Landing-page section grid */
+.dcr-sg-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--dcr-space-md);
+  margin-bottom: var(--dcr-space-xl);
+}
+
+.dcr-sg-section-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dcr-space-xs);
+  padding: var(--dcr-space-lg);
+  background: var(--dcr-color-bg);
+  border: 1px solid var(--dcr-color-border);
+  border-radius: var(--dcr-radius-xl);
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dcr-sg-section-card:hover {
+  border-color: var(--dcr-color-accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dcr-sg-section-card__label {
+  font-size: var(--dcr-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--dcr-color-accent);
+}
+
+.dcr-sg-section-card__title {
+  font-size: var(--dcr-font-size-base);
+  font-weight: 600;
+  color: var(--dcr-color-text);
+  margin: 0;
+}
+
+.dcr-sg-section-card__desc {
+  font-size: var(--dcr-font-size-sm);
+  color: var(--dcr-color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.dcr-sg-section-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: var(--dcr-space-xs);
+}
+
+.dcr-sg-section-card__chip {
+  font-size: 11px;
+  color: var(--dcr-color-text-muted);
+  background: var(--dcr-color-bg-subtle);
+  border-radius: var(--dcr-radius);
+  padding: 2px 6px;
+}
+
+/* Sections */
+.dcr-sg-section {
+  margin-bottom: 72px;
+  scroll-margin-top: 48px;
+}
+
+
+.dcr-sg-section__desc {
+  color: var(--dcr-color-text-muted);
+  font-size: var(--dcr-font-size-base);
+  margin: 0 0 var(--dcr-space-md) 0;
+  line-height: 1.6;
+}
+
+/* Preview canvas - white/main bg so that components render against their
+   natural context and bg-subtle components (metric, callout) remain visible. */
+.dcr-sg-preview {
+  padding: var(--dcr-space-lg);
+  border: 1px solid var(--dcr-color-border);
+  border-radius: var(--dcr-radius) var(--dcr-radius) 0 0;
+  background: var(--dcr-color-bg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dcr-space-sm);
+  align-items: center;
+  min-height: 64px;
+}
+
+/* Stack children vertically (for callout, code, etc.) */
+.dcr-sg-preview--stack {
+  display: block;
+}
+
+.dcr-sg-preview--stack>* {
+  /* margin-bottom: var(--dcr-space-sm); */
+}
+
+.dcr-sg-preview--stack>*:last-child {
+  margin-bottom: 0;
+}
+
+/* Small label above a row of examples inside a preview */
+.dcr-sg-row-label {
+  font-size: var(--dcr-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--dcr-color-text-muted);
+  display: block;
+  margin-bottom: var(--dcr-space-sm);
+}
+
+/* "Usage" label above code block */
+.dcr-sg-code-label {
+  font-size: var(--dcr-font-size-xs);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--dcr-color-text-muted);
+  background: var(--dcr-color-bg-subtle);
+  border: 1px solid var(--dcr-color-border);
+  padding: var(--dcr-space-xs) var(--dcr-space-md);
+  margin: 0;
+}
+
+.dcr-sg-code {
+  border: 1px solid var(--dcr-color-border);
+  border-top: none;
+  border-radius: 0 0 var(--dcr-radius) var(--dcr-radius);
+  overflow: hidden;
+  margin: 0 0 var(--dcr-space-xl) 0;
+}
+
+/* Inner <code> - hljs github-dark theme handles background/color;
+   we just lock down the font and size to keep it consistent */
+.dcr-sg-code code {
+  font-family: var(--dcr-font-mono) !important;
+  font-size: 12px !important;
+  border-radius: 0 !important;
+  line-height: 1.6;
+}
+
+/* Colour palette - grouped token swatches */
+
+.dcr-sg-palette {
+  border: 1px solid var(--dcr-color-border);
+  border-radius: var(--dcr-radius-lg);
+  overflow: hidden;
+  background: var(--dcr-color-bg);
+  margin-bottom: var(--dcr-space-lg);
+}
+
+
+.dcr-sg-palette__group {
+  padding: var(--dcr-space-md) var(--dcr-space-lg);
+  border-bottom: 1px solid var(--dcr-color-border);
+}
+
+.dcr-sg-palette__group:last-child {
+  border-bottom: none;
+}
+
+.dcr-sg-palette__group-title {
+  font-size: var(--dcr-font-size-base);
+  font-weight: 600;
+  color: var(--dcr-color-text);
+  margin: 0 0 3px 0;
+}
+
+.dcr-sg-palette__group-desc {
+  font-size: var(--dcr-font-size-sm);
+  color: var(--dcr-color-text-muted);
+  margin: 0 0 var(--dcr-space-md) 0;
+}
+
+.dcr-sg-palette__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--dcr-space-sm);
+}
+
+/* Individual swatch card: color block on top, meta below */
+.dcr-sg-swatch {
+  border: 1px solid var(--dcr-color-border);
+  border-radius: var(--dcr-radius);
+  overflow: hidden;
+  background: var(--dcr-color-bg);
+}
+
+.dcr-sg-swatch__color {
+  height: 56px;
+}
+
+.dcr-sg-swatch__info {
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--dcr-color-border);
+}
+
+.dcr-sg-swatch__name {
+  font-size: var(--dcr-font-size-sm);
+  font-weight: 600;
+  color: var(--dcr-color-text);
+  margin: 0 0 2px 0;
+  line-height: 1.3;
+}
+
+.dcr-sg-swatch__hex {
+  font-family: var(--dcr-font-mono);
+  font-size: var(--dcr-font-size-xs);
+  color: var(--dcr-color-text-muted);
+  margin: 0 0 3px 0;
+}
+
+.dcr-sg-swatch__desc {
+  font-size: var(--dcr-font-size-xs);
+  color: var(--dcr-color-text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Spacing scale */
+.dcr-sg-space-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dcr-space-sm);
+  margin-bottom: var(--dcr-space-lg);
+}
+
+.dcr-sg-space-item {
+  display: flex;
+  align-items: center;
+  gap: var(--dcr-space-md);
+}
+
+.dcr-sg-space-item__bar {
+  height: 20px;
+  background: var(--dcr-color-accent);
+  border-radius: var(--dcr-radius);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.dcr-sg-space-item__label {
+  font-family: var(--dcr-font-mono);
+  font-size: var(--dcr-font-size-sm);
+  color: var(--dcr-color-text-muted);
+}

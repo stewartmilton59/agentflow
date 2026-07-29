@@ -1,0 +1,1023 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Point of Sale - PharmaFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pos-container {
+        background: #f8f9fc;
+        min-height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pos-card {
+        border-radius: 15px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+        border: none;
+    }
+
+    .pos-table {
+        font-size: 14px;
+    }
+
+    .pos-table th {
+        background: #f1f3f9;
+        border: none;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .product-row {
+        transition: all 0.2s;
+    }
+
+    .product-row:hover {
+        background-color: #f8f9fc;
+    }
+
+    .product-search {
+        font-size: 16px;
+        padding: 10px 14px;
+        height: auto;
+    }
+
+    .quantity-input {
+        width: 100px;
+        text-align: center;
+        font-size: 16px;
+        padding: 10px;
+        height: auto;
+    }
+
+    .price-input {
+        width: 120px;
+        text-align: right;
+        font-size: 16px;
+        padding: 10px;
+        height: auto;
+    }
+
+    .total-cell {
+        font-weight: 600;
+        color: #27ae60;
+    }
+
+    .cart-summary {
+        background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);
+        border-radius: 15px;
+        padding: 16px 20px;
+        color: white;
+    }
+
+    .cart-summary .summary-stats {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .cart-summary .summary-stat {
+        text-align: center;
+        min-width: 100px;
+    }
+
+    .cart-summary .summary-stat small {
+        font-size: 0.7rem;
+        opacity: 0.8;
+        display: block;
+    }
+
+    .cart-summary .summary-stat .stat-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+    }
+
+    .cart-total {
+        font-size: 1.6rem;
+        font-weight: bold;
+    }
+
+    .cart-summary .summary-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-left: auto;
+    }
+
+    .cart-summary .summary-actions .form-select,
+    .cart-summary .summary-actions .form-control {
+        font-size: 0.85rem;
+    }
+
+    .btn-add-row {
+        background: #27ae60;
+        color: white;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 500;
+    }
+
+    .btn-add-row:hover {
+        background: #219a52;
+        color: white;
+    }
+
+    .btn-remove-row {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+    }
+
+    .btn-remove-row:hover {
+        background: #c0392b;
+    }
+
+    .stock-badge {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 10px;
+    }
+
+    .stock-low {
+        background: #ff6b6b;
+        color: white;
+    }
+
+    .stock-ok {
+        background: #51cf66;
+        color: white;
+    }
+
+    .price-warning {
+        font-size: 11px;
+        color: #e74c3c;
+        display: none;
+    }
+
+    .btn-proforma {
+        background-color: #f39c12;
+        border-color: #f39c12;
+        color: white;
+        font-weight: 600;
+    }
+
+    .btn-proforma:hover {
+        background-color: #d68910;
+        color: white;
+    }
+
+    .btn-sale {
+        background-color: #27ae60;
+        border-color: #27ae60;
+        color: white;
+        font-weight: 600;
+    }
+
+    .btn-sale:hover {
+        background-color: #1e8449;
+        color: white;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .receipt-modal .modal-content {
+        border-radius: 15px;
+    }
+
+    /* Suggestion box styles */
+    .product-suggestions {
+        background: #fff;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        padding: 0.5rem;
+        margin-top: 0.25rem;
+        max-height: 180px;
+        overflow-y: auto;
+    }
+    .product-suggestions {
+        max-height: 280px;
+    }
+    .product-suggestions button {
+        font-size: 15px;
+        padding: 10px 16px;
+        white-space: normal;
+        text-align: left;
+        width: 100%;
+        border-radius: 8px;
+        margin-bottom: 4px;
+    }
+    .product-suggestions small {
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pos-container py-3">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Main POS Table - Full Width -->
+            <div class="col-12">
+                <div class="card pos-card">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cash-register me-2 text-primary"></i>
+                            Point of Sale & Quotations
+                        </h5>
+                        <hr>
+                    </div>
+                    <div class="card-body">
+                        <!-- Customer Section -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-user me-1"></i>Customer Select
+                                </label>
+                                <select class="form-select" id="customerSelect">
+                                    <option value="">Walk-in Customer</option>
+                                    {% for customer in customers %}
+                                    <option value="{{ customer.id }}">{{ customer.get_full_name }} - {{ customer.phone_number }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-user-edit me-1"></i>Customer Name / Company (Required for Proforma)
+                                </label>
+                                <input type="text" class="form-control" id="customerName" placeholder="Enter name or company details">
+                            </div>
+                        </div>
+
+                        <!-- Products Table -->
+                        <div class="table-responsive">
+                            <table class="table pos-table" id="posItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 30%">Product/Medicine</th>
+                                        <th style="width: 12%">Quantity</th>
+                                        <th style="width: 10%">Type</th>
+                                        <th style="width: 18%">Price (TZS)</th>
+                                        <th style="width: 18%">Total (TZS)</th>
+                                        <th style="width: 12%">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="posItemsBody">
+                                    <!-- Dynamic rows generated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Add Row Button -->
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-add-row" id="addRowBtn">
+                                <i class="fas fa-plus-circle me-2"></i>Add Another Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Cart Summary Bar -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="cart-summary">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <!-- Stats -->
+                        <div class="summary-stat">
+                            <small>Items</small>
+                            <div class="stat-value" id="totalItems" data-raw-value="0">0</div>
+                        </div>
+                        <div class="summary-stat">
+                            <small>Subtotal</small>
+                            <div class="stat-value" id="subtotal" data-raw-value="0">TZS 0.00</div>
+                        </div>
+                        <div class="summary-stat">
+                            <small>Grand Total</small>
+                            <div class="cart-total" id="grandTotal" data-raw-value="0">TZS 0.00</div>
+                        </div>
+
+                        <div class="vr bg-white opacity-25 d-none d-md-block"></div>
+
+                        <!-- Payment Method -->
+                        <div class="d-flex align-items-center gap-2">
+                            <select class="form-select form-select-sm" id="paymentMethod" style="width: auto; min-width: 120px;">
+                                <option value="cash">Cash</option>
+                                <option value="card">Card</option>
+                                <option value="mobile_money">Mobile Money</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="credit">Credit</option>
+                            </select>
+                            <div id="paymentAmountDiv">
+                                <input type="number" class="form-control form-control-sm" id="paymentAmount" step="0.01" value="0" placeholder="Paid" style="width: 110px;">
+                            </div>
+                            <div id="changeAmountDiv">
+                                <span class="text-white-50 small">Change: </span>
+                                <span id="changeAmount" class="fw-bold">TZS 0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="vr bg-white opacity-25 d-none d-md-block"></div>
+
+                        <!-- Notes & Proforma Validity -->
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" class="form-control form-control-sm" id="notes" placeholder="Notes..." style="width: 150px;">
+                            <select class="form-select form-select-sm" id="proformaValidity" style="width: auto;">
+                                <option value="7">7 Days</option>
+                                <option value="14" selected>14 Days</option>
+                                <option value="30">30 Days</option>
+                            </select>
+                        </div>
+
+                        <div class="vr bg-white opacity-25 d-none d-md-block"></div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sale btn-sm py-1" id="completeSaleBtn">
+                                <i class="fas fa-check-circle me-1"></i>Sale
+                            </button>
+                            <button type="button" class="btn btn-proforma btn-sm py-1" id="generateProformaBtn">
+                                <i class="fas fa-file-invoice me-1"></i>Proforma
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Direct Sale Completed Modal -->
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content receipt-modal">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>Sale Completed!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-receipt" style="font-size: 4rem; color: #27ae60;"></i>
+                <h4 class="mt-3">Invoice #<span id="receiptInvoice"></span></h4>
+                <p class="text-muted">The sale has been completed and stock updated.</p>
+                <div class="d-grid gap-2">
+                    <a href="#" id="receiptLink" target="_blank" class="btn btn-success">Print / View Receipt</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Proforma Invoice Generated Modal -->
+<div class="modal fade" id="proformaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content receipt-modal">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-file-invoice me-2"></i>Proforma Issued!
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-file-pdf" style="font-size: 4rem; color: #f39c12;"></i>
+                <h4 class="mt-3">Proforma #<span id="proformaNumber"></span></h4>
+                <p class="text-muted">The proforma invoice has been created. Inventory has <strong>not</strong> been deducted.</p>
+                <div class="d-grid gap-2">
+                    <a href="#" id="proformaLink" target="_blank" class="btn btn-warning fw-bold text-dark">Print Proforma Invoice</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ==========================================
+    // 1. HUMANIZER TOOLKIT
+    // ==========================================
+    function humanizeCurrency(num) {
+        const parsed = parseFloat(num) || 0;
+        return parsed.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function humanizeCount(num) {
+        const parsed = parseInt(num) || 0;
+        return parsed.toLocaleString('en-US');
+    }
+
+    // ==========================================
+    // 2. DATA & STATE VARIABLES
+    // ==========================================
+    const productsData = [
+        {% for product in products %}
+        {
+            id: "{{ product.id }}",
+            name: "{{ product.name|escapejs }}",
+            price: {{ product.selling_price|floatformat:2 }},
+            wholesale_price: {{ product.wholesale_price|default:0|floatformat:2 }},
+            stock: {{ product.current_stock }},
+            min_price: {{ product.selling_price|floatformat:2 }} * 0.7,
+            prescription: {% if product.prescription_required != 'none' %}true{% else %}false{% endif %}
+        },
+        {% endfor %}
+    ];
+
+    let rowCount = 0;
+    const productMap = {};
+    productsData.forEach(product => {
+        productMap[product.id] = product;
+    });
+
+    // ==========================================
+    // 3. POS TABLE FUNCTIONS
+    // ==========================================
+    function addRow() {
+        const tbody = document.getElementById('posItemsBody');
+        const rowId = Date.now() + rowCount;
+        rowCount++;
+
+        const row = document.createElement('tr');
+        row.className = 'product-row fade-in';
+        row.dataset.rowId = rowId;
+
+        // Build hidden select options for form submission
+        let productOptions = '<option value="">Select Product</option>';
+        productsData.forEach(product => {
+            productOptions += `<option value="${product.id}">${product.name} - TZS ${humanizeCurrency(product.price)} (Stock: ${humanizeCount(product.stock)})</option>`;
+        });
+
+        row.innerHTML = `
+            <td>
+                <input type="text" class="form-control product-search" placeholder="Type product name..." autocomplete="off">
+                <div class="product-suggestions mt-1"></div>
+                <select class="form-select product-select d-none">
+                    ${productOptions}
+                </select>
+            </td>
+            <td>
+                <input type="number" class="form-control quantity-input" value="1" min="1" step="1">
+                <small class="stock-badge stock-ok d-none"></small>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm price-type-toggle" role="group">
+                    <input type="radio" class="btn-check price-type" name="price-type-${rowId}" id="retail-${rowId}" value="retail" checked autocomplete="off">
+                    <label class="btn btn-outline-primary btn-sm" for="retail-${rowId}">Retail</label>
+                    <input type="radio" class="btn-check price-type" name="price-type-${rowId}" id="wholesale-${rowId}" value="wholesale" autocomplete="off">
+                    <label class="btn btn-outline-primary btn-sm" for="wholesale-${rowId}">Whole</label>
+                </div>
+            </td>
+            <td>
+                <input type="number" class="form-control price-input" step="0.01" min="0">
+                <small class="price-warning text-danger">Below 70% of original!</small>
+            </td>
+            <td>
+                <span class="total-cell" data-raw-value="0">0.00</span>
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-remove-row">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+        bindProductSearch(row);   // NEW: attach typeahead behaviour
+        attachRowEvents(row);
+        updateTotals();
+    }
+
+    // NEW: Typeahead / autocomplete binding (same pattern as purchase_order_form.html)
+    function bindProductSearch(row) {
+        const searchInput = row.querySelector('.product-search');
+        const suggestionsDiv = row.querySelector('.product-suggestions');
+        const hiddenSelect = row.querySelector('.product-select');
+
+        if (!searchInput || !suggestionsDiv || !hiddenSelect) return;
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            suggestionsDiv.innerHTML = '';
+
+            if (!query) {
+                hiddenSelect.value = '';
+                hiddenSelect.dispatchEvent(new Event('change'));
+                return;
+            }
+
+            const matches = productsData.filter(p => p.name.toLowerCase().includes(query)).slice(0, 10);
+
+            if (matches.length === 0) {
+                suggestionsDiv.innerHTML = '<small class="text-muted">No matching products</small>';
+                return;
+            }
+
+                matches.forEach(product => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-outline-primary mb-1';
+                    var priceInfo = `Retail: TZS ${humanizeCurrency(product.price)}`;
+                    if (product.wholesale_price > 0) {
+                        priceInfo += ` | Wholesale: TZS ${humanizeCurrency(product.wholesale_price)}`;
+                    }
+                    btn.textContent = `${product.name} — ${priceInfo}`;
+                btn.addEventListener('click', function() {
+                    searchInput.value = product.name;
+                    hiddenSelect.value = product.id;
+                    hiddenSelect.dispatchEvent(new Event('change'));
+                    suggestionsDiv.innerHTML = '';
+                });
+                suggestionsDiv.appendChild(btn);
+            });
+        });
+    }
+
+    function attachRowEvents(row) {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const priceInput = row.querySelector('.price-input');
+        const removeBtn = row.querySelector('.btn-remove-row');
+        const priceTypeToggles = row.querySelectorAll('.price-type');
+
+        productSelect.addEventListener('change', function() {
+            updateRowProduct(row);
+        });
+
+        quantityInput.addEventListener('input', function() {
+            validateQuantity(row);
+            updateRowTotal(row);
+            updateTotals();
+        });
+
+        priceInput.addEventListener('input', function() {
+            validatePrice(row);
+            updateRowTotal(row);
+            updateTotals();
+        });
+
+        priceTypeToggles.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    setPriceFromType(row);
+                }
+            });
+        });
+
+        removeBtn.addEventListener('click', function() {
+            const rows = document.querySelectorAll('#posItemsBody .product-row');
+            if (rows.length > 1) {
+                row.remove();
+                updateTotals();
+            } else {
+                productSelect.value = '';
+                row.querySelector('.product-search').value = '';
+                const suggestionsDiv = row.querySelector('.product-suggestions');
+                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+                quantityInput.value = 1;
+                priceInput.value = '';
+                row.querySelector('.price-warning').style.display = 'none';
+                row.querySelector('.stock-badge').classList.add('d-none');
+                updateRowTotal(row);
+                updateTotals();
+            }
+        });
+    }
+
+    function getSelectedPriceType(row) {
+        const wholesaleRadio = row.querySelector('.price-type[value="wholesale"]');
+        return wholesaleRadio && wholesaleRadio.checked ? 'wholesale' : 'retail';
+    }
+
+    function setPriceFromType(row) {
+        const productSelect = row.querySelector('.product-select');
+        const priceInput = row.querySelector('.price-input');
+        const productId = productSelect.value;
+
+        if (!productId || !productMap[productId]) return;
+
+        const product = productMap[productId];
+        const priceType = getSelectedPriceType(row);
+
+        if (priceType === 'wholesale' && product.wholesale_price > 0) {
+            priceInput.value = product.wholesale_price.toFixed(2);
+            priceInput.dataset.originalPrice = product.wholesale_price;
+            priceInput.dataset.minPrice = product.wholesale_price * 0.7;
+        } else {
+            priceInput.value = product.price.toFixed(2);
+            priceInput.dataset.originalPrice = product.price;
+            priceInput.dataset.minPrice = product.min_price;
+        }
+
+        validatePrice(row);
+        updateRowTotal(row);
+        updateTotals();
+    }
+
+    function updateRowProduct(row) {
+        const productSelect = row.querySelector('.product-select');
+        const priceInput = row.querySelector('.price-input');
+        const quantityInput = row.querySelector('.quantity-input');
+        const stockBadge = row.querySelector('.stock-badge');
+        const priceTypeToggles = row.querySelectorAll('.price-type');
+        const productId = productSelect.value;
+
+        if (productId && productMap[productId]) {
+            const product = productMap[productId];
+
+            // Enable/disable wholesale toggle
+            const wholesaleRadio = row.querySelector('.price-type[value="wholesale"]');
+            const wholesaleLabel = row.querySelector('label[for="wholesale-' + row.dataset.rowId + '"]');
+            if (wholesaleRadio && wholesaleLabel) {
+                if (product.wholesale_price > 0) {
+                    wholesaleRadio.disabled = false;
+                    wholesaleLabel.classList.remove('disabled');
+                } else {
+                    wholesaleRadio.disabled = true;
+                    wholesaleLabel.classList.add('disabled');
+                    if (wholesaleRadio.checked) {
+                        row.querySelector('.price-type[value="retail"]').checked = true;
+                    }
+                }
+            }
+
+            setPriceFromType(row);
+
+            quantityInput.max = product.stock;
+
+            if (product.stock <= 10) {
+                stockBadge.textContent = `⚠️ Low: ${humanizeCount(product.stock)}`;
+                stockBadge.classList.add('stock-low');
+                stockBadge.classList.remove('stock-ok', 'd-none');
+            } else {
+                stockBadge.textContent = `✓ Stock: ${humanizeCount(product.stock)}`;
+                stockBadge.classList.add('stock-ok');
+                stockBadge.classList.remove('stock-low', 'd-none');
+            }
+        } else {
+            priceInput.value = '';
+            stockBadge.classList.add('d-none');
+        }
+
+        validatePrice(row);
+        updateRowTotal(row);
+        updateTotals();
+    }
+
+    function validateQuantity(row) {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const productId = productSelect.value;
+
+        if (productId && productMap[productId]) {
+            const maxStock = productMap[productId].stock;
+            let quantity = parseInt(quantityInput.value);
+
+            if (isNaN(quantity) || quantity < 1) {
+                quantityInput.value = 1;
+            } else if (quantity > maxStock) {
+                alert(`Stock warning: Only ${humanizeCount(maxStock)} in stock.`);
+            }
+        }
+    }
+
+    function validatePrice(row) {
+        const priceInput = row.querySelector('.price-input');
+        const priceWarning = row.querySelector('.price-warning');
+        let price = parseFloat(priceInput.value);
+
+        if (priceInput.dataset.minPrice && !isNaN(price)) {
+            const minPrice = parseFloat(priceInput.dataset.minPrice);
+            if (price < minPrice) {
+                priceInput.classList.add('is-invalid');
+                priceWarning.style.display = 'block';
+                return false;
+            } else {
+                priceInput.classList.remove('is-invalid');
+                priceWarning.style.display = 'none';
+                return true;
+            }
+        }
+        return true;
+    }
+
+    function updateRowTotal(row) {
+        const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+        const price = parseFloat(row.querySelector('.price-input').value) || 0;
+        const total = quantity * price;
+
+        const totalCell = row.querySelector('.total-cell');
+        totalCell.dataset.rawValue = total;
+        totalCell.textContent = humanizeCurrency(total);
+        return total;
+    }
+
+    function updateTotals() {
+        let totalItems = 0;
+        let grandTotal = 0;
+
+        document.querySelectorAll('#posItemsBody .product-row').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+            const price = parseFloat(row.querySelector('.price-input').value) || 0;
+            if (productSelect.value && price > 0 && quantity > 0) {
+                totalItems += quantity;
+                grandTotal += quantity * price;
+            }
+        });
+
+        document.getElementById('totalItems').dataset.rawValue = totalItems;
+        document.getElementById('totalItems').textContent = humanizeCount(totalItems);
+
+        document.getElementById('subtotal').dataset.rawValue = grandTotal;
+        document.getElementById('subtotal').textContent = `TZS ${humanizeCurrency(grandTotal)}`;
+
+        document.getElementById('grandTotal').dataset.rawValue = grandTotal;
+        document.getElementById('grandTotal').textContent = `TZS ${humanizeCurrency(grandTotal)}`;
+
+        const paymentAmount = document.getElementById('paymentAmount');
+        if (paymentAmount) {
+            updateChange();
+        }
+    }
+
+    function updateChange() {
+        const grandTotal = parseFloat(document.getElementById('grandTotal').dataset.rawValue) || 0;
+        const paymentAmount = parseFloat(document.getElementById('paymentAmount').value) || 0;
+        const change = paymentAmount - grandTotal;
+
+        const changeEl = document.getElementById('changeAmount');
+        if (change >= 0) {
+            changeEl.textContent = `TZS ${humanizeCurrency(change)}`;
+        } else {
+            changeEl.textContent = `TZS 0.00 (Due: ${humanizeCurrency(Math.abs(change))})`;
+        }
+    }
+
+    function resetPosForm() {
+        document.getElementById('customerSelect').value = '';
+        document.getElementById('customerName').value = '';
+        document.getElementById('notes').value = '';
+        document.getElementById('paymentMethod').value = 'cash';
+        document.getElementById('paymentAmountDiv').style.display = 'block';
+        document.getElementById('changeAmountDiv').style.display = 'block';
+
+        const rows = document.querySelectorAll('#posItemsBody .product-row');
+        Array.from(rows).slice(1).forEach(row => row.remove());
+
+        const firstRow = document.querySelector('#posItemsBody .product-row');
+        if (firstRow) {
+            firstRow.querySelector('.product-select').value = '';
+            const searchInput = firstRow.querySelector('.product-search');
+            if (searchInput) searchInput.value = '';
+            const suggestionsDiv = firstRow.querySelector('.product-suggestions');
+            if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+            firstRow.querySelector('.quantity-input').value = 1;
+            firstRow.querySelector('.price-input').value = '';
+            firstRow.querySelector('.total-cell').textContent = humanizeCurrency(0);
+            firstRow.querySelector('.total-cell').dataset.rawValue = 0;
+            const stockBadge = firstRow.querySelector('.stock-badge');
+            if (stockBadge) stockBadge.classList.add('d-none');
+            const priceWarning = firstRow.querySelector('.price-warning');
+            if (priceWarning) priceWarning.style.display = 'none';
+            // Reset price type to retail
+            const retailRadio = firstRow.querySelector('.price-type[value="retail"]');
+            if (retailRadio) retailRadio.checked = true;
+            const wholesaleRadio = firstRow.querySelector('.price-type[value="wholesale"]');
+            if (wholesaleRadio) wholesaleRadio.disabled = false;
+            const wholesaleLabel = firstRow.querySelector('label[for="wholesale-' + firstRow.dataset.rowId + '"]');
+            if (wholesaleLabel) wholesaleLabel.classList.remove('disabled');
+        }
+        updateTotals();
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Extract valid cart items
+    function getSelectedItems() {
+        const items = [];
+        let validationErrors = [];
+
+        document.querySelectorAll('#posItemsBody .product-row').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+            const price = parseFloat(row.querySelector('.price-input').value) || 0;
+
+            if (productSelect.value && quantity > 0 && price > 0) {
+                const productId = productSelect.value;
+                const priceInput = row.querySelector('.price-input');
+                if (productMap[productId]) {
+                    const minPrice = parseFloat(priceInput.dataset.minPrice) || productMap[productId].min_price;
+                    if (price < minPrice) {
+                        validationErrors.push(`${productMap[productId].name} - Price below 70% threshold (Min: TZS ${humanizeCurrency(minPrice)})`);
+                    }
+                }
+                var priceType = getSelectedPriceType(row);
+                items.push({
+                    product_id: productSelect.value,
+                    product_name: productMap[productId] ? productMap[productId].name : '',
+                    quantity: quantity,
+                    unit_price: price,
+                    price_type: priceType
+                });
+            }
+        });
+
+        return { items, validationErrors };
+    }
+
+    // ==========================================
+    // 4. INITIALIZATION & SUBMIT HANDLERS
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('paymentMethod').addEventListener('change', function() {
+            const paymentDiv = document.getElementById('paymentAmountDiv');
+            const changeDiv = document.getElementById('changeAmountDiv');
+
+            if (this.value === 'credit') {
+                paymentDiv.style.display = 'none';
+                changeDiv.style.display = 'none';
+            } else {
+                paymentDiv.style.display = 'block';
+                changeDiv.style.display = 'block';
+                const grandTotal = parseFloat(document.getElementById('grandTotal').dataset.rawValue) || 0;
+                document.getElementById('paymentAmount').value = grandTotal.toFixed(2);
+                updateChange();
+            }
+        });
+
+        document.getElementById('paymentAmount').addEventListener('input', updateChange);
+        document.getElementById('addRowBtn').addEventListener('click', addRow);
+
+        // ==========================================
+        // ACTION A: COMPLETE SALE (REAL SALE - Affects Stock)
+        // ==========================================
+        document.getElementById('completeSaleBtn').addEventListener('click', async function() {
+            const { items, validationErrors } = getSelectedItems();
+
+            if (validationErrors.length > 0) {
+                alert('Validation Errors:\n' + validationErrors.join('\n'));
+                return;
+            }
+
+            if (items.length === 0) {
+                alert('Please add at least one product to complete a sale.');
+                return;
+            }
+
+            const customerId = document.getElementById('customerSelect').value;
+            const customerName = document.getElementById('customerName').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            let paymentAmount = paymentMethod !== 'credit' ?
+                parseFloat(document.getElementById('paymentAmount').value) || 0 : 0;
+            const grandTotal = parseFloat(document.getElementById('grandTotal').dataset.rawValue) || 0;
+
+            // Credit sale confirmation
+            if (paymentMethod !== 'credit' && paymentAmount < grandTotal && paymentAmount > 0) {
+                if (!confirm(`Remaining balance TZS ${humanizeCurrency(grandTotal - paymentAmount)} will be saved as credit. Continue?`)) {
+                    return;
+                }
+            }
+
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+
+            try {
+                const response = await fetch("{% url 'sales:pos_save_sale' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        customer_id: customerId,
+                        customer_name: customerName,
+                        items: items,
+                        is_proforma: false,
+                        payment_amount: paymentAmount,
+                        payment_method: paymentMethod,
+                        notes: document.getElementById('notes').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('receiptInvoice').textContent = data.invoice_number;
+                    document.getElementById('receiptLink').href = data.redirect_url;
+                    new bootstrap.Modal(document.getElementById('receiptModal')).show();
+                    resetPosForm();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to complete sale.'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while saving the sale.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Complete Sale';
+            }
+        });
+
+        // ==========================================
+        // ACTION B: GENERATE PROFORMA (NO Stock Impact)
+        // ==========================================
+        document.getElementById('generateProformaBtn').addEventListener('click', async function() {
+            const customerId = document.getElementById('customerSelect').value;
+            const customerName = document.getElementById('customerName').value.trim();
+
+            // Proforma requires customer info
+            if (!customerId && !customerName) {
+                alert('Proforma Invoice requires a Customer. Please select or write a customer/company name.');
+                document.getElementById('customerName').focus();
+                return;
+            }
+
+            const { items, validationErrors } = getSelectedItems();
+
+            if (validationErrors.length > 0) {
+                alert('Validation Errors:\n' + validationErrors.join('\n'));
+                return;
+            }
+
+            if (items.length === 0) {
+                alert('Please select at least one item to generate a Proforma Invoice.');
+                return;
+            }
+
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+
+            try {
+                const response = await fetch("{% url 'sales:pos_save_proforma' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        customer_id: customerId,
+                        customer_name: customerName,
+                        items: items,
+                        valid_days: document.getElementById('proformaValidity').value,
+                        notes: document.getElementById('notes').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('proformaNumber').textContent = data.invoice_number;
+                    document.getElementById('proformaLink').href = data.redirect_url;
+                    new bootstrap.Modal(document.getElementById('proformaModal')).show();
+                    resetPosForm();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to generate proforma invoice.'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while generating the proforma invoice.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-file-invoice me-2"></i>Generate Proforma';
+            }
+        });
+
+        // Add initial empty row
+        addRow();
+    });
+</script>
+{% endblock %}

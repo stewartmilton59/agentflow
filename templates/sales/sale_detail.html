@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Sale Details - {{ sale.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-receipt text-primary me-2"></i>Sale Details
+            </h2>
+            <p class="text-muted">Invoice #{{ sale.invoice_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to List
+            </a>
+            <a href="{% url 'sales:sale_receipt' sale.id %}" class="btn btn-primary" target="_blank">
+                <i class="fas fa-print me-2"></i>Print invoice
+            </a>
+            <a href="{% url 'sales:sale_delivery_note' sale.id %}" class="btn btn-primary" target="_blank">
+                <i class="fas fa-print me-2"></i>Print Delivery Note
+            </a>
+
+            {% if sale.payment_status != 'paid' %}
+                <a href="{% url 'sales:sale_payments' sale.id %}" class="btn btn-info">
+                    <i class="fas fa-money-bill-wave me-2"></i>Manage Payments
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-shopping-cart me-2"></i>Items
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Discount</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.product.name }}</strong><br>
+                                        <small class="text-muted">{{ item.product.sku }}</small>
+                                        {% if item.product.generic_name %}
+                                            <br><small class="text-muted">{{ item.product.generic_name }}</small>
+                                        {% endif %}
+                                        {% if item.prescription_required %}
+                                            <br><span class="badge bg-info">Rx Required</span>
+                                        {% endif %}
+                                    </span>
+                                    <td class="text-center">{{ item.quantity }}</span>
+                                    <td class="text-end">TZS {{ item.unit_price|floatformat:0|intcomma }}</span>
+                                    <td class="text-end">TZS {{ item.discount_amount|floatformat:0|intcomma }}</span>
+                                    <td class="text-end"><strong>TZS {{ item.subtotal|floatformat:0|intcomma }}</strong></span>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-secondary">
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Subtotal:</strong></span>
+                                    <td class="text-end"><strong>TZS {{ sale.subtotal|floatformat:0|intcomma }}</strong></span>
+                                </tr>
+                                {% if sale.discount_amount > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Discount:</strong></span>
+                                    <td class="text-end"><strong>TZS {{ sale.discount_amount|floatformat:0|intcomma }}</strong></span>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Tax (18%):</strong></span>
+                                    <td class="text-end"><strong>TZS {{ sale.tax_amount|floatformat:0|intcomma }}</strong></span>
+                                </tr>
+                                <tr class="table-active">
+                                    <td colspan="4" class="text-end"><strong>TOTAL AMOUNT:</strong></span>
+                                    <td class="text-end"><strong class="h5">TZS {{ sale.total_amount|floatformat:0|intcomma }}</strong></span>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Sale Information Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-info-circle me-2"></i>Sale Information
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th width="40%">Date:</th>
+                            <td>{{ sale.sale_date|date:"d/m/Y H:i" }}</span>
+                        </tr>
+                        <tr>
+                            <th>Cashier:</th>
+                            <td>
+                                {% if sale.created_by %}
+                                    {{ sale.created_by.get_full_name|default:sale.created_by.username }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Customer:</th>
+                            <td>
+                                {% if sale.customer %}
+                                    <strong>{{ sale.customer.get_full_name }}</strong><br>
+                                    <small class="text-muted"> {{ sale.customer.phone_number }}</small><br>
+                                    {% if sale.customer.phone_number_2 %}
+                                        <small class="text-muted"> {{ sale.customer.phone_number_2 }}</small><br>
+                                    {% endif %}
+                                    {% if sale.customer.email %}
+                                        <small class="text-muted">{{ sale.customer.email }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <strong>Walk-in Customer</strong><br>
+                                    <small class="text-muted">{{ sale.customer_name|default:"-" }}</small>
+                                {% endif %}
+                            </span>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if sale.status == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% elif sale.status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% elif sale.status == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% elif sale.status == 'refunded' %}
+                                    <span class="badge bg-secondary">Refunded</span>
+                                {% endif %}
+                            </span>
+                        </tr>
+                        <tr>
+                            <th>Notes:</th>
+                            <td>{{ sale.notes|default:"-"|linebreaks }}</span>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payment Information Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-credit-card me-2"></i>Payment Information
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th width="50%">Amount Paid:</th>
+                            <td><strong class="text-success">TZS {{ sale.amount_paid|floatformat:0|intcomma }}</strong></span>
+                        </tr>
+                        <tr>
+                            <th>Change:</th>
+                            <td>TZS {{ sale.change_amount|floatformat:0|intcomma }}</span>
+                        </tr>
+                        <tr>
+                            <th>Remaining Balance:</th>
+                            <td>
+                                {% with remaining=sale.total_amount|add:sale.amount_paid|add:"-"|add:sale.amount_paid %}
+                                    {% with remaining=sale.total_amount|add:"-"|add:sale.amount_paid %}
+                                        {% if remaining > 0 %}
+                                            <strong class="text-danger">TZS {{ remaining|floatformat:0|intcomma }}</strong>
+                                        {% else %}
+                                            <strong class="text-success">TZS 0</strong>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endwith %}
+                            </span>
+                        </tr>
+                        <tr>
+                            <th>Payment Status:</th>
+                            <td>
+                                {% if sale.payment_status == 'paid' %}
+                                    <span class="badge bg-success">Fully Paid</span>
+                                {% elif sale.payment_status == 'partial' %}
+                                    <span class="badge bg-warning">Partially Paid</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Unpaid</span>
+                                {% endif %}
+                            </span>
+                        </tr>
+                        <tr>
+                            <th>Credit Amount:</th>
+                            <td>
+                                {% if sale.has_credit %}
+                                    <strong class="text-danger">TZS {{ sale.credit_amount|floatformat:0|intcomma }}</strong>
+                                {% else %}
+                                    <span class="text-muted">TZS 0</span>
+                                {% endif %}
+                            </span>
+                        </tr>
+                    </table>
+
+                    {% if payments %}
+                        <hr>
+                        <h6><i class="fas fa-history me-1"></i>Payment History</h6>
+                        <div class="timeline">
+                            {% for payment in payments %}
+                                <div class="mb-2 pb-2 border-bottom">
+                                    <small class="text-muted">{{ payment.created_at|date:"d/m/Y H:i:s" }}</small><br>
+                                    <strong>TZS {{ payment.amount|floatformat:0|intcomma }}</strong><br>
+                                    <span class="badge bg-secondary">{{ payment.get_payment_method_display }}</span>
+                                    {% if payment.reference_number %}
+                                        <br><small class="text-muted">Ref: {{ payment.reference_number }}</small>
+                                    {% endif %}
+                                    {% if payment.notes %}
+                                        <br><small class="text-muted">{{ payment.notes }}</small>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-2">
+                            <strong>Total Paid: TZS {{ sale.amount_paid|floatformat:0|intcomma }}</strong>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle"></i> No payments recorded yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fas fa-cog me-2"></i>Quick Actions
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'sales:sale_receipt' sale.id %}" class="btn btn-primary" target="_blank">
+                            <i class="fas fa-print me-2"></i>Print Invoice
+                        </a>
+                        <br>
+                        <a href="{% url 'sales:sale_delivery_note' sale.id %}" class="btn btn-primary" target="_blank">
+                            <i class="fas fa-print me-2"></i>Print Delivery
+                        </a>
+
+                        {% if sale.payment_status != 'paid' %}
+                            <a href="{% url 'sales:sale_payments' sale.id %}" class="btn btn-info">
+                                <i class="fas fa-money-bill-wave me-2"></i>Record Payment
+                            </a>
+                        {% endif %}
+                        {% if sale.has_credit and sale.payment_status != 'paid' %}
+                            {% with credit_record=sale.credit_records.first %}
+                                {% if credit_record %}
+                                <a href="{% url 'sales:credit_detail' credit_record.id %}" class="btn btn-danger">
+                                    <i class="fas fa-credit-card me-2"></i>Manage Credit
+                                </a>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+
+                        <button class="btn btn-secondary" onclick="window.history.back();">
+                            <i class="fas fa-arrow-left me-2"></i>Go Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Credit Records Section (if any) -->
+    {% if credit_records %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-credit-card me-2"></i>Credit Records
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Credit Number</th>
+                                    <th>Credit Amount</th>
+                                    <th>Amount Paid</th>
+                                    <th>Remaining Balance</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for credit in credit_records %}
+                                <tr>
+                                    <td>{{ credit.credit_number }}</span>
+                                    </span>
+                                    <td>TZS {{ credit.credit_amount|floatformat:0|intcomma }}</span>
+                                    </span>
+                                    <td>TZS {{ credit.amount_paid|floatformat:0|intcomma }}</span>
+                                    </span>
+                                    <td>
+                                        {% if credit.remaining_balance > 0 %}
+                                            <strong class="text-danger">TZS {{ credit.remaining_balance|floatformat:0|intcomma }}</strong>
+                                        {% else %}
+                                            <span class="text-success">TZS 0</span>
+                                        {% endif %}
+                                    </span>
+                                    </span>
+                                    <td>{{ credit.due_date|date:"d/m/Y"|default:"Not set" }}</span>
+                                    </span>
+                                    <td>
+                                        {% if credit.status == 'pending' %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% elif credit.status == 'partial' %}
+                                            <span class="badge bg-info">Partial</span>
+                                        {% elif credit.status == 'paid' %}
+                                            <span class="badge bg-success">Paid</span>
+                                        {% elif credit.status == 'overdue' %}
+                                            <span class="badge bg-danger">Overdue</span>
+                                        {% endif %}
+                                    </span>
+                                    </span>
+                                    <td>
+                                        <a href="{% url 'sales:credit_detail' credit.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% if credit.status != 'paid' %}
+                                            <a href="{% url 'sales:credit_payment' credit.id %}" class="btn btn-sm btn-success">
+                                                <i class="fas fa-money-bill"></i> Pay
+                                            </a>
+                                        {% endif %}
+                                    </span>
+                                    </span>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .timeline {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .timeline .border-bottom:last-child {
+        border-bottom: none !important;
+    }
+    .table-bordered th, .table-bordered td {
+        vertical-align: middle;
+    }
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.65rem;
+    }
+    .card-header {
+        font-weight: 600;
+    }
+    .btn-sm {
+        margin: 2px;
+    }
+</style>
+
+{% block extra_js %}
+<script>
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+P to print
+        if (e.ctrlKey && e.key === 'p') {
+            e.preventDefault();
+            window.open('{% url "sales:sale_receipt" sale.id %}', '_blank');
+        }
+        // Ctrl+R to go back
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            window.history.back();
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

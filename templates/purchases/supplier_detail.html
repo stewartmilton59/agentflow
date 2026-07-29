@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ supplier.name }}</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Supplier Details</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Contact Person:</strong> {{ supplier.contact_person }}</p>
+            <p><strong>Phone:</strong> {{ supplier.phone }}</p>
+            <p><strong>Email:</strong> {{ supplier.email }}</p>
+            <p><strong>Address:</strong> {{ supplier.address }}</p>
+            <p><strong>Current Balance:</strong> TZS {{ supplier.current_balance|floatformat:0|intcomma }}</p>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'purchases:supplier_payment' %}?supplier={{ supplier.id }}" class="btn btn-success">
+                <i class="fas fa-money-bill me-2"></i>Record Payment
+            </a>
+            <a href="{% url 'purchases:purchase_order_create' %}?supplier={{ supplier.id }}" class="btn btn-primary">
+                <i class="fas fa-shopping-cart me-2"></i>Create PO
+            </a>
+        </div>
+    </div>
+    
+    <h3>Recent Purchase Orders</h3>
+    <div class="card">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>PO Number</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for po in purchase_orders %}
+                    <tr>
+                        <td>{{ po.po_number }}</td>
+                        <td>{{ po.order_date|date:"d/m/Y" }}</td>
+                        <td>TZS {{ po.total_amount|floatformat:0|intcomma }}</td>
+                        <td>{{ po.get_status_display }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4">No purchase orders.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Stock Adjustment{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-sliders-h me-2 text-warning"></i>Stock Adjustment</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> Positive quantity increases stock, negative quantity decreases stock.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                {% if form.product %}
+                                    {{ form.product|as_crispy_field }}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-12 mb-3" id="batch-field" style="display: none;">
+                                {% if form.batch %}
+                                    {{ form.batch|as_crispy_field }}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {% if form.reason %}
+                                    {{ form.reason|as_crispy_field }}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {% if form.quantity %}
+                                    {{ form.quantity|as_crispy_field }}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                {% if form.notes %}
+                                    {{ form.notes|as_crispy_field }}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Adjustment
+                                </button>
+                                <a href="{% url 'inventory:stock_list' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Show/hide batch field based on product selection
+        $('#id_product').change(function() {
+            var productId = $(this).val();
+            if (productId) {
+                $.get('/inventory/api/product/' + productId + '/batches/', function(data) {
+                    if (data.has_batches) {
+                        $('#batch-field').show();
+                    } else {
+                        $('#batch-field').hide();
+                    }
+                });
+            } else {
+                $('#batch-field').hide();
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

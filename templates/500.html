@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}500 - Server Error{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row min-vh-100 align-items-center">
+        <div class="col-md-6 mx-auto text-center">
+            <div class="error-page">
+                <div class="error-icon mb-4">
+                    <i class="fas fa-server fa-5x text-danger"></i>
+                </div>
+                <h1 class="display-1 fw-bold text-danger">500</h1>
+                <h2 class="mb-4">Internal Server Error</h2>
+                <p class="text-muted mb-4">
+                    Something went wrong on our end. Our technical team has been notified.
+                    Please try again later or contact support if the problem persists.
+                </p>
+                <div class="error-actions">
+                    <a href="{% url 'sales:pos_view' %}" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i>Back to POS
+                    </a>
+                    <button onclick="location.reload()" class="btn btn-warning">
+                        <i class="fas fa-sync-alt me-2"></i>Try Again
+                    </button>
+                </div>
+                <div class="mt-4">
+                    <p class="small text-muted">
+                        Error Code: 500 | Internal Server Error<br>
+                        Reference ID: {{ request_id|default:"N/A" }}<br>
+                        Please contact support with this reference ID if the issue persists.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-page {
+        padding: 40px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .error-icon i {
+        color: #dc2626;
+    }
+    .display-1 {
+        font-size: 6rem;
+        font-weight: 700;
+    }
+    .error-actions .btn {
+        margin: 0 5px;
+        padding: 10px 25px;
+    }
+</style>
+{% endblock %}

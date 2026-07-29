@@ -1,0 +1,827 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Point of Sale - PharmaFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pos-container {
+        background: #f8f9fc;
+        min-height: calc(100vh - 200px);
+    }
+
+    .pos-card {
+        border-radius: 15px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+        border: none;
+    }
+
+    .pos-table {
+        font-size: 14px;
+    }
+
+    .pos-table th {
+        background: #f1f3f9;
+        border: none;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .product-row {
+        transition: all 0.2s;
+    }
+
+    .product-row:hover {
+        background-color: #f8f9fc;
+    }
+
+    .quantity-input {
+        width: 100px;
+        text-align: center;
+    }
+
+    .price-input {
+        width: 120px;
+        text-align: right;
+    }
+
+    .total-cell {
+        font-weight: 600;
+        color: #27ae60;
+    }
+
+    .cart-summary {
+        background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+    }
+
+    .cart-total {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+
+    .btn-add-row {
+        background: #27ae60;
+        color: white;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 500;
+    }
+
+    .btn-add-row:hover {
+        background: #219a52;
+        color: white;
+    }
+
+    .btn-remove-row {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+    }
+
+    .btn-remove-row:hover {
+        background: #c0392b;
+    }
+
+    .stock-badge {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 10px;
+    }
+
+    .stock-low {
+        background: #ff6b6b;
+        color: white;
+    }
+
+    .stock-ok {
+        background: #51cf66;
+        color: white;
+    }
+
+    .price-warning {
+        font-size: 11px;
+        color: #e74c3c;
+        display: none;
+    }
+
+    .btn-proforma {
+        background-color: #f39c12;
+        border-color: #f39c12;
+        color: white;
+        font-weight: 600;
+    }
+
+    .btn-proforma:hover {
+        background-color: #d68910;
+        color: white;
+    }
+
+    .btn-sale {
+        background-color: #27ae60;
+        border-color: #27ae60;
+        color: white;
+        font-weight: 600;
+    }
+
+    .btn-sale:hover {
+        background-color: #1e8449;
+        color: white;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .receipt-modal .modal-content {
+        border-radius: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pos-container py-3">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Main POS Table -->
+            <div class="col-lg-8">
+                <div class="card pos-card">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cash-register me-2 text-primary"></i>
+                            Point of Sale & Quotations
+                        </h5>
+                        <hr>
+                    </div>
+                    <div class="card-body">
+                        <!-- Customer Section -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-user me-1"></i>Customer Select
+                                </label>
+                                <select class="form-select" id="customerSelect">
+                                    <option value="">Walk-in Customer</option>
+                                    {% for customer in customers %}
+                                    <option value="{{ customer.id }}">{{ customer.get_full_name }} - {{ customer.phone_number }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-user-edit me-1"></i>Customer Name / Company (Required for Proforma)
+                                </label>
+                                <input type="text" class="form-control" id="customerName" placeholder="Enter name or company details">
+                            </div>
+                        </div>
+
+                        <!-- Products Table -->
+                        <div class="table-responsive">
+                            <table class="table pos-table" id="posItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 35%">Product/Medicine</th>
+                                        <th style="width: 15%">Quantity</th>
+                                        <th style="width: 20%">Price (TZS)</th>
+                                        <th style="width: 20%">Total (TZS)</th>
+                                        <th style="width: 10%">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="posItemsBody">
+                                    <!-- Dynamic rows generated by JS -->
+                                    <input type="text" class="form-control product-search" placeholder="Type product name">
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Add Row Button -->
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-add-row" id="addRowBtn">
+                                <i class="fas fa-plus-circle me-2"></i>Add Another Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Summary & Actions -->
+            <div class="col-lg-4">
+                <div class="cart-summary">
+                    <h5 class="mb-3"><i class="fas fa-calculator me-2"></i>Order Summary</h5>
+                    <hr class="bg-white">
+
+                    <div class="mb-3">
+                        <small>Total Items</small>
+                        <h4 id="totalItems" data-raw-value="0">0</h4>
+                    </div>
+
+                    <div class="mb-3">
+                        <small>Subtotal</small>
+                        <h3 id="subtotal" data-raw-value="0">TZS 0.00</h3>
+                    </div>
+
+                    <hr class="bg-white">
+
+                    <div>
+                        <small>Grand Total</small>
+                        <div class="cart-total" id="grandTotal" data-raw-value="0">TZS 0.00</div>
+                    </div>
+
+                    <hr class="bg-white">
+
+                    <!-- Payment Section for Direct Sales -->
+                    <div id="paymentSection" class="mt-3">
+                        <label class="form-label text-white fw-bold">Payment Method</label>
+                        <select class="form-select mb-3" id="paymentMethod">
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="mobile_money">Mobile Money</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="credit">Credit</option>
+                        </select>
+
+                        <div id="paymentAmountDiv" style="display: block;">
+                            <label class="form-label text-white">Amount Paid (TZS)</label>
+                            <input type="number" class="form-control mb-3" id="paymentAmount" step="0.01" value="0">
+                        </div>
+
+                        <div id="changeAmountDiv" style="display: block;">
+                            <small class="text-white-50">Change</small>
+                            <h5 id="changeAmount" class="text-white mb-3">TZS 0.00</h5>
+                        </div>
+                    </div>
+
+                    <label class="form-label text-white">Notes / Terms</label>
+                    <textarea class="form-control mb-3" id="notes" rows="2" placeholder="Notes or payment terms..."></textarea>
+
+                    <!-- Proforma Specific Options -->
+                    <div class="mb-3">
+                        <label class="form-label text-white small">Proforma Validity</label>
+                        <select class="form-select form-select-sm" id="proformaValidity">
+                            <option value="7">Valid for 7 Days</option>
+                            <option value="14" selected>Valid for 14 Days</option>
+                            <option value="30">Valid for 30 Days</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-sale py-2" id="completeSaleBtn">
+                            <i class="fas fa-check-circle me-2"></i>Complete Sale
+                        </button>
+                        <button type="button" class="btn btn-proforma py-2" id="generateProformaBtn">
+                            <i class="fas fa-file-invoice me-2"></i>Generate Proforma
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Direct Sale Completed Modal -->
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content receipt-modal">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>Sale Completed!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-receipt" style="font-size: 4rem; color: #27ae60;"></i>
+                <h4 class="mt-3">Invoice #<span id="receiptInvoice"></span></h4>
+                <p class="text-muted">The sale has been completed and stock updated.</p>
+                <div class="d-grid gap-2">
+                    <a href="#" id="receiptLink" target="_blank" class="btn btn-success">Print / View Receipt</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Proforma Invoice Generated Modal -->
+<div class="modal fade" id="proformaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content receipt-modal">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-file-invoice me-2"></i>Proforma Issued!
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-file-pdf" style="font-size: 4rem; color: #f39c12;"></i>
+                <h4 class="mt-3">Proforma #<span id="proformaNumber"></span></h4>
+                <p class="text-muted">The proforma invoice has been created. Inventory has <strong>not</strong> been deducted.</p>
+                <div class="d-grid gap-2">
+                    <a href="#" id="proformaLink" target="_blank" class="btn btn-warning fw-bold text-dark">Print Proforma Invoice</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ==========================================
+    // 1. HUMANIZER TOOLKIT
+    // ==========================================
+    function humanizeCurrency(num) {
+        const parsed = parseFloat(num) || 0;
+        return parsed.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function humanizeCount(num) {
+        const parsed = parseInt(num) || 0;
+        return parsed.toLocaleString('en-US');
+    }
+
+    // ==========================================
+    // 2. DATA & STATE VARIABLES
+    // ==========================================
+    const productsData = [
+        {% for product in products %}
+        {
+            id: "{{ product.id }}",
+            name: "{{ product.name|escapejs }}",
+            price: {{ product.selling_price|floatformat:2 }},
+            stock: {{ product.current_stock }},
+            min_price: {{ product.selling_price|floatformat:2 }} * 0.7,
+            prescription: {% if product.prescription_required != 'none' %}true{% else %}false{% endif %}
+        },
+        {% endfor %}
+    ];
+
+    let rowCount = 0;
+    const productMap = {};
+    productsData.forEach(product => {
+        productMap[product.id] = product;
+    });
+
+    // ==========================================
+    // 3. POS TABLE FUNCTIONS
+    // ==========================================
+    function addRow() {
+        const tbody = document.getElementById('posItemsBody');
+        const rowId = Date.now() + rowCount;
+        rowCount++;
+
+        const row = document.createElement('tr');
+        row.className = 'product-row fade-in';
+        row.dataset.rowId = rowId;
+
+        let productOptions = '<option value="">Select Product</option>';
+        productsData.forEach(product => {
+            productOptions += `<option value="${product.id}">
+                ${product.name} - TZS ${humanizeCurrency(product.price)} (Stock: ${humanizeCount(product.stock)})
+            </option>`;
+        });
+
+        row.innerHTML = `
+            <td>
+                <select class="form-select product-select" style="width: 100%">
+                    ${productOptions}
+                </select>
+            </td>
+            <td>
+                <input type="number" class="form-control quantity-input" value="1" min="1" step="1">
+                <small class="stock-badge stock-ok d-none"></small>
+            </td>
+            <td>
+                <input type="number" class="form-control price-input" step="0.01" min="0">
+                <small class="price-warning text-danger">Below 70% of original!</small>
+            </td>
+            <td>
+                <span class="total-cell" data-raw-value="0">0.00</span>
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-remove-row">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+        attachRowEvents(row);
+        updateTotals();
+    }
+
+    function attachRowEvents(row) {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const priceInput = row.querySelector('.price-input');
+        const removeBtn = row.querySelector('.btn-remove-row');
+
+        productSelect.addEventListener('change', function() {
+            updateRowProduct(row);
+        });
+
+        quantityInput.addEventListener('input', function() {
+            validateQuantity(row);
+            updateRowTotal(row);
+            updateTotals();
+        });
+
+        priceInput.addEventListener('input', function() {
+            validatePrice(row);
+            updateRowTotal(row);
+            updateTotals();
+        });
+
+        removeBtn.addEventListener('click', function() {
+            const rows = document.querySelectorAll('#posItemsBody .product-row');
+            if (rows.length > 1) {
+                row.remove();
+                updateTotals();
+            } else {
+                productSelect.value = '';
+                quantityInput.value = 1;
+                priceInput.value = '';
+                row.querySelector('.price-warning').style.display = 'none';
+                row.querySelector('.stock-badge').classList.add('d-none');
+                updateRowTotal(row);
+                updateTotals();
+            }
+        });
+    }
+
+    function updateRowProduct(row) {
+        const productSelect = row.querySelector('.product-select');
+        const priceInput = row.querySelector('.price-input');
+        const quantityInput = row.querySelector('.quantity-input');
+        const stockBadge = row.querySelector('.stock-badge');
+        const productId = productSelect.value;
+
+        if (productId && productMap[productId]) {
+            const product = productMap[productId];
+            priceInput.value = product.price.toFixed(2);
+            priceInput.dataset.originalPrice = product.price;
+            priceInput.dataset.minPrice = product.min_price;
+
+            quantityInput.max = product.stock;
+
+            if (product.stock <= 10) {
+                stockBadge.textContent = `⚠️ Low: ${humanizeCount(product.stock)}`;
+                stockBadge.classList.add('stock-low');
+                stockBadge.classList.remove('stock-ok', 'd-none');
+            } else {
+                stockBadge.textContent = `✓ Stock: ${humanizeCount(product.stock)}`;
+                stockBadge.classList.add('stock-ok');
+                stockBadge.classList.remove('stock-low', 'd-none');
+            }
+        } else {
+            priceInput.value = '';
+            stockBadge.classList.add('d-none');
+        }
+
+        validatePrice(row);
+        updateRowTotal(row);
+        updateTotals();
+    }
+
+    function validateQuantity(row) {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const productId = productSelect.value;
+
+        if (productId && productMap[productId]) {
+            const maxStock = productMap[productId].stock;
+            let quantity = parseInt(quantityInput.value);
+
+            if (isNaN(quantity) || quantity < 1) {
+                quantityInput.value = 1;
+            } else if (quantity > maxStock) {
+                alert(`Stock warning: Only ${humanizeCount(maxStock)} in stock.`);
+            }
+        }
+    }
+
+    function validatePrice(row) {
+        const priceInput = row.querySelector('.price-input');
+        const priceWarning = row.querySelector('.price-warning');
+        let price = parseFloat(priceInput.value);
+
+        if (priceInput.dataset.minPrice && !isNaN(price)) {
+            const minPrice = parseFloat(priceInput.dataset.minPrice);
+            if (price < minPrice) {
+                priceInput.classList.add('is-invalid');
+                priceWarning.style.display = 'block';
+                return false;
+            } else {
+                priceInput.classList.remove('is-invalid');
+                priceWarning.style.display = 'none';
+                return true;
+            }
+        }
+        return true;
+    }
+
+    function updateRowTotal(row) {
+        const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+        const price = parseFloat(row.querySelector('.price-input').value) || 0;
+        const total = quantity * price;
+
+        const totalCell = row.querySelector('.total-cell');
+        totalCell.dataset.rawValue = total;
+        totalCell.textContent = humanizeCurrency(total);
+        return total;
+    }
+
+    function updateTotals() {
+        let totalItems = 0;
+        let grandTotal = 0;
+
+        document.querySelectorAll('#posItemsBody .product-row').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+            const price = parseFloat(row.querySelector('.price-input').value) || 0;
+            if (productSelect.value && price > 0 && quantity > 0) {
+                totalItems += quantity;
+                grandTotal += quantity * price;
+            }
+        });
+
+        document.getElementById('totalItems').dataset.rawValue = totalItems;
+        document.getElementById('totalItems').textContent = humanizeCount(totalItems);
+
+        document.getElementById('subtotal').dataset.rawValue = grandTotal;
+        document.getElementById('subtotal').textContent = `TZS ${humanizeCurrency(grandTotal)}`;
+
+        document.getElementById('grandTotal').dataset.rawValue = grandTotal;
+        document.getElementById('grandTotal').textContent = `TZS ${humanizeCurrency(grandTotal)}`;
+
+        const paymentAmount = document.getElementById('paymentAmount');
+        if (paymentAmount) {
+            updateChange();
+        }
+    }
+
+    function updateChange() {
+        const grandTotal = parseFloat(document.getElementById('grandTotal').dataset.rawValue) || 0;
+        const paymentAmount = parseFloat(document.getElementById('paymentAmount').value) || 0;
+        const change = paymentAmount - grandTotal;
+
+        const changeEl = document.getElementById('changeAmount');
+        if (change >= 0) {
+            changeEl.textContent = `TZS ${humanizeCurrency(change)}`;
+        } else {
+            changeEl.textContent = `TZS 0.00 (Due: ${humanizeCurrency(Math.abs(change))})`;
+        }
+    }
+
+    function resetPosForm() {
+        document.getElementById('customerSelect').value = '';
+        document.getElementById('customerName').value = '';
+        document.getElementById('notes').value = '';
+        document.getElementById('paymentMethod').value = 'cash';
+        document.getElementById('paymentAmountDiv').style.display = 'block';
+        document.getElementById('changeAmountDiv').style.display = 'block';
+
+        const rows = document.querySelectorAll('#posItemsBody .product-row');
+        Array.from(rows).slice(1).forEach(row => row.remove());
+
+        const firstRow = document.querySelector('#posItemsBody .product-row');
+        if (firstRow) {
+            firstRow.querySelector('.product-select').value = '';
+            firstRow.querySelector('.quantity-input').value = 1;
+            firstRow.querySelector('.price-input').value = '';
+            firstRow.querySelector('.total-cell').textContent = humanizeCurrency(0);
+            firstRow.querySelector('.total-cell').dataset.rawValue = 0;
+            const stockBadge = firstRow.querySelector('.stock-badge');
+            if (stockBadge) stockBadge.classList.add('d-none');
+            const priceWarning = firstRow.querySelector('.price-warning');
+            if (priceWarning) priceWarning.style.display = 'none';
+        }
+        updateTotals();
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Extract valid cart items
+    function getSelectedItems() {
+        const items = [];
+        let validationErrors = [];
+
+        document.querySelectorAll('#posItemsBody .product-row').forEach(row => {
+            const productSelect = row.querySelector('.product-select');
+            const quantity = parseInt(row.querySelector('.quantity-input').value) || 0;
+            const price = parseFloat(row.querySelector('.price-input').value) || 0;
+
+            if (productSelect.value && quantity > 0 && price > 0) {
+                const productId = productSelect.value;
+                if (productMap[productId]) {
+                    const minPrice = productMap[productId].min_price;
+                    if (price < minPrice) {
+                        validationErrors.push(`${productMap[productId].name} - Price below 70% threshold (Min: TZS ${humanizeCurrency(minPrice)})`);
+                    }
+                }
+                items.push({
+                    product_id: productSelect.value,
+                    product_name: productSelect.options[productSelect.selectedIndex].text.split(' -')[0],
+                    quantity: quantity,
+                    unit_price: price
+                });
+            }
+        });
+
+        return { items, validationErrors };
+    }
+
+    // ==========================================
+    // 4. INITIALIZATION & SUBMIT HANDLERS
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('paymentMethod').addEventListener('change', function() {
+            const paymentDiv = document.getElementById('paymentAmountDiv');
+            const changeDiv = document.getElementById('changeAmountDiv');
+
+            if (this.value === 'credit') {
+                paymentDiv.style.display = 'none';
+                changeDiv.style.display = 'none';
+            } else {
+                paymentDiv.style.display = 'block';
+                changeDiv.style.display = 'block';
+                const grandTotal = parseFloat(document.getElementById('grandTotal').dataset.rawValue) || 0;
+                document.getElementById('paymentAmount').value = grandTotal.toFixed(2);
+                updateChange();
+            }
+        });
+
+        document.getElementById('paymentAmount').addEventListener('input', updateChange);
+        document.getElementById('addRowBtn').addEventListener('click', addRow);
+
+// ==========================================
+// ACTION A: COMPLETE SALE (REAL SALE - Affects Stock)
+// ==========================================
+document.getElementById('completeSaleBtn').addEventListener('click', async function() {
+    const { items, validationErrors } = getSelectedItems();
+
+    if (validationErrors.length > 0) {
+        alert('Validation Errors:\n' + validationErrors.join('\n'));
+        return;
+    }
+
+    if (items.length === 0) {
+        alert('Please add at least one product to complete a sale.');
+        return;
+    }
+
+    const customerId = document.getElementById('customerSelect').value;
+    const customerName = document.getElementById('customerName').value;
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    let paymentAmount = paymentMethod !== 'credit' ?
+        parseFloat(document.getElementById('paymentAmount').value) || 0 : 0;
+    const grandTotal = parseFloat(document.getElementById('grandTotal').dataset.rawValue) || 0;
+
+    // Credit sale confirmation
+    if (paymentMethod !== 'credit' && paymentAmount < grandTotal && paymentAmount > 0) {
+        if (!confirm(`Remaining balance TZS ${humanizeCurrency(grandTotal - paymentAmount)} will be saved as credit. Continue?`)) {
+            return;
+        }
+    }
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+
+    try {
+        // FIXED: Use correct sale endpoint, send is_proforma: false
+        const response = await fetch("{% url 'sales:pos_save_sale' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                customer_id: customerId,
+                customer_name: customerName,
+                items: items,
+                is_proforma: false,  // Explicitly false for real sales
+                payment_amount: paymentAmount,
+                payment_method: paymentMethod,
+                notes: document.getElementById('notes').value
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('receiptInvoice').textContent = data.invoice_number;
+            document.getElementById('receiptLink').href = data.redirect_url;
+            new bootstrap.Modal(document.getElementById('receiptModal')).show();
+            resetPosForm();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to complete sale.'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while saving the sale.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Complete Sale';
+    }
+});
+
+// ==========================================
+// ACTION B: GENERATE PROFORMA (NO Stock Impact)
+// ==========================================
+document.getElementById('generateProformaBtn').addEventListener('click', async function() {
+    const customerId = document.getElementById('customerSelect').value;
+    const customerName = document.getElementById('customerName').value.trim();
+
+    // Proforma requires customer info
+    if (!customerId && !customerName) {
+        alert('Proforma Invoice requires a Customer. Please select or write a customer/company name.');
+        document.getElementById('customerName').focus();
+        return;
+    }
+
+    const { items, validationErrors } = getSelectedItems();
+
+    if (validationErrors.length > 0) {
+        alert('Validation Errors:\n' + validationErrors.join('\n'));
+        return;
+    }
+
+    if (items.length === 0) {
+        alert('Please select at least one item to generate a Proforma Invoice.');
+        return;
+    }
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+
+    try {
+        // FIXED: Use dedicated proforma endpoint
+        const response = await fetch("{% url 'sales:pos_save_proforma' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                customer_id: customerId,
+                customer_name: customerName,
+                items: items,
+                valid_days: document.getElementById('proformaValidity').value,
+                notes: document.getElementById('notes').value
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('proformaNumber').textContent = data.invoice_number;
+            document.getElementById('proformaLink').href = data.redirect_url;
+            new bootstrap.Modal(document.getElementById('proformaModal')).show();
+            resetPosForm();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to generate proforma invoice.'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while generating the proforma invoice.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-invoice me-2"></i>Generate Proforma';
+    }
+});
+
+        // Add initial empty row
+        addRow();
+    });
+</script>
+{% endblock %}

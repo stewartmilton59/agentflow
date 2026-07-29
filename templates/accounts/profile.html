@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}My Profile - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    {% if user.profile_image %}
+                        <img src="{{ user.profile_image.url }}" class="avatar-lg rounded-circle mb-3">
+                    {% else %}
+                        <div class="avatar-lg rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto mb-3">
+                            <i class="fas fa-user fa-3x text-white"></i>
+                        </div>
+                    {% endif %}
+                    <h4>{{ user.get_full_name }}</h4>
+                    <p class="text-muted">
+                        <i class="fas fa-envelope me-1"></i> {{ user.email }}<br>
+                        <i class="fas fa-phone me-1"></i> {{ user.phone|default:"Not provided" }}
+                    </p>
+                    <span class="badge bg-success">{{ user.get_role_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-user-edit me-2"></i>Edit Profile
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ user_form|crispy }}
+                        {{ profile_form|crispy }}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Profile
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

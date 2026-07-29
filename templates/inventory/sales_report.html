@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Sales Report - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header & Action Buttons -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="fas fa-chart-line me-2 text-success"></i>Sales & Revenue Report</h4>
+            <p class="text-muted small mb-0">View, filter, and export transaction details.</p>
+        </div>
+        <div>
+            <!-- Export PDF -->
+            <a href="{% url 'inventory:export_sales_pdf' %}?search={{ search }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}"
+               class="btn btn-outline-danger me-2"
+               target="_blank">
+                <i class="fas fa-file-pdf me-1"></i> Export PDF
+            </a>
+            <!-- Export Excel -->
+            <a href="{% url 'inventory:export_sales_excel' %}?search={{ search }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}"
+               class="btn btn-outline-success">
+                <i class="fas fa-file-excel me-1"></i> Export Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body">
+                    <div class="text-uppercase text-muted small fw-bold">Total Transactions</div>
+                    <h3 class="fw-bold mb-0 text-dark">{{ total_records }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body">
+                    <div class="text-uppercase text-muted small fw-bold">Total Units Sold</div>
+                    <h3 class="fw-bold mb-0 text-primary">{{ total_quantity|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body">
+                    <div class="text-uppercase text-muted small fw-bold">Total Revenue / Paid</div>
+                    <h3 class="fw-bold mb-0 text-success">TZS{{ total_amount_paid|floatformat:2|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Search Product / Customer</label>
+                    <input type="text" name="search" class="form-control" placeholder="Product or Customer name..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Payment Status</label>
+                    <select name="payment_status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="paid" {% if payment_status == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="pending" {% if payment_status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="partial" {% if payment_status == 'partial' %}selected{% endif %}>Partial</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Date From</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Date To</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success me-2 w-50">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                    <a href="{% url 'inventory:sales_report' %}" class="btn btn-secondary w-50">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center" style="width: 50px;">#</th>
+                            <th>Date & Time</th>
+                            <th>Product Name</th>
+                            <th>Customer Name</th>
+                            <th class="text-end">Quantity Sold</th>
+                            <th class="text-end">Amount Paid</th>
+                            <th class="text-center">Payment Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in sales_items %}
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>{{ item.sale.created_at|date:"d/m/Y H:i" }}</td>
+                            <td><strong>{{ item.product.name }}</strong></td>
+                            <td>
+                                {% if item.sale.customer %}
+                                    {{ item.sale.customer.get_full_name|default:item.sale.customer }}
+                                {% else %}
+                                    {{ item.sale.customer_name|default:"Walk-in Customer" }}
+                                {% endif %}
+                            </td>
+                            <td class="text-end"><strong>{{ item.quantity }}</strong></td>
+                            <td class="text-end fw-bold text-success">TZS{{ item.calculated_amount_paid|floatformat:2|intcomma }}</td>
+                            <td class="text-center">
+                                {% with status=item.sale.payment_status|lower %}
+                                    {% if status == 'paid' %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% elif status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ item.sale.payment_status|title }}</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                No sales records found matching your query.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if sales_items %}
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="4" class="text-center">Page Total</td>
+                            <td class="text-end">{{ total_quantity }}</td>
+                            <td class="text-end text-success">TZS{{ total_amount_paid|floatformat:2|intcomma }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if sales_items.has_other_pages %}
+            <div class="p-3">
+                <nav>
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if sales_items.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ sales_items.previous_page_number }}&search={{ search }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}">Previous</a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in sales_items.paginator.page_range %}
+                            {% if sales_items.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > sales_items.number|add:'-3' and num < sales_items.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}&search={{ search }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if sales_items.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ sales_items.next_page_number }}&search={{ search }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}">Next</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

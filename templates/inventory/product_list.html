@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">Products</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="#">Inventory</a></li>
+                    <li class="breadcrumb-item active">Products</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Add New Product
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Filters Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-5">
+                    <input type="text"
+                           class="form-control"
+                           name="search"
+                           value="{{ search|default:'' }}"
+                           placeholder="Search by brand name or generic name...">
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" name="product_type">
+                        <option value="">All Product Types</option>
+                        {% for type_value, type_label in product_types %}
+                            <option value="{{ type_value }}" {% if product_type == type_value %}selected{% endif %}>
+                                {{ type_label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-search me-1"></i> Search
+                    </button>
+                </div>
+                <!-- Preserve low_stock and out_of_stock filters -->
+                {% if low_stock_filter %}
+                <input type="hidden" name="low_stock" value="{{ low_stock_filter }}">
+                {% endif %}
+                {% if out_of_stock_filter %}
+                <input type="hidden" name="out_of_stock" value="{{ out_of_stock_filter }}">
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-boxes me-2 text-primary"></i>
+                Product List
+            </h5>
+            <span class="badge bg-primary">{{ products.paginator.count }} products total</span>
+        </div>
+        <div class="card-body p-0">
+            {% if products %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Brand Name</th>
+                            <th>Generic Name</th>
+                            <th>Type</th>
+                            <th>Pack Size</th>
+                            <th>Expiry Date</th>
+                            <th>Buying Price</th>
+                            <th>Retail Price</th>
+                            <th>Wholesale Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td class="fw-semibold">{{ product.name }}</td>
+                            <td>{{ product.generic_name|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-{% if product.product_type == 'medicine' %}primary{% elif product.product_type == 'equipment' %}info{% elif product.product_type == 'consumable' %}warning text-dark{% elif product.product_type == 'cosmetic' %}pink{% else %}secondary{% endif %}">
+                                    {{ product.get_product_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ product.pack_size|default:"-" }}</td>
+                            <td>
+                                {% if product.expiry_date %}
+                                    {% if product.expiry_date < today %}
+                                        <span class="text-danger fw-bold">{{ product.expiry_date|date:"Y-m-d" }} <i class="fas fa-exclamation-circle"></i></span>
+                                    {% elif product.expiry_date <= expiry_warning_date %}
+                                        <span class="text-warning">{{ product.expiry_date|date:"Y-m-d" }} <i class="fas fa-exclamation-triangle"></i></span>
+                                    {% else %}
+                                        {{ product.expiry_date|date:"Y-m-d" }}
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>TZS {{ product.purchase_price|default:"0.00"|floatformat:2|intcomma }}</td>
+                            <td class="fw-bold text-success">TZS {{ product.selling_price|default:"0.00"|floatformat:2|intcomma }}</td>
+                            <td class="fw-bold text-info">TZS {{ product.wholesale_price|default:"0.00"|floatformat:2|intcomma }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'inventory:product_detail' pk=product.id %}"
+                                       class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:product_update' pk=product.id %}"
+                                       class="btn btn-outline-info" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button"
+                                           class="btn btn-outline-danger"
+                                           title="Delete"
+                                           data-bs-toggle="modal"
+                                           data-bs-target="#deleteModal{{ product.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No products found</h5>
+                <p class="text-muted">Add a new product to get started</p>
+                <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Add New Product
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if products.has_other_pages %}
+        <div class="card-footer bg-white">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if products.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ products.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if product_type %}&product_type={{ product_type }}{% endif %}{% if low_stock_filter %}&low_stock={{ low_stock_filter }}{% endif %}{% if out_of_stock_filter %}&out_of_stock={{ out_of_stock_filter }}{% endif %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                        </li>
+                    {% endif %}
+
+                    {% for num in products.paginator.page_range %}
+                        {% if products.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > products.number|add:'-3' and num < products.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if product_type %}&product_type={{ product_type }}{% endif %}{% if low_stock_filter %}&low_stock={{ low_stock_filter }}{% endif %}{% if out_of_stock_filter %}&out_of_stock={{ out_of_stock_filter }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if products.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ products.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if product_type %}&product_type={{ product_type }}{% endif %}{% if low_stock_filter %}&low_stock={{ low_stock_filter }}{% endif %}{% if out_of_stock_filter %}&out_of_stock={{ out_of_stock_filter }}{% endif %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+
+            <!-- Page info -->
+            <div class="text-center text-muted small mt-2">
+                Showing {{ products.start_index }} - {{ products.end_index }} of {{ products.paginator.count }} products
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Modals for each product -->
+{% for product in products %}
+<div class="modal fade" id="deleteModal{{ product.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Product
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong>"{{ product.name }}"</strong>?</p>
+                <p class="text-danger small"><i class="fas fa-warning me-1"></i>This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{% url 'inventory:product_delete' pk=product.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

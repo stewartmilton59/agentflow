@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}User Details - {{ user_detail.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Profile Information</h3>
+                </div>
+                <div class="card-body text-center">
+                    {% if user_detail.profile_image %}
+                        <img src="{{ user_detail.profile_image.url }}" class="img-circle img-fluid mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 150px; height: 150px;">
+                            <i class="fas fa-user fa-5x text-white"></i>
+                        </div>
+                    {% endif %}
+                    <h4>{{ user_detail.get_full_name }}</h4>
+                    <p class="text-muted">@{{ user_detail.username }}</p>
+                    <hr>
+                    <p><i class="fas fa-envelope"></i> {{ user_detail.email }}</p>
+                    <p><i class="fas fa-phone"></i> {{ user_detail.phone|default:"Not provided" }}</p>
+                    <p>
+                        {% if user_detail.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+
+                        {% if user_detail.is_superuser %}
+                            <span class="badge bg-warning">Superuser</span>
+                        {% else %}
+                            <span class="badge 
+                                {% if user_detail.role == 'admin' %}bg-danger
+                                {% elif user_detail.role == 'manager' %}bg-warning text-dark
+                                {% elif user_detail.role == 'pharmacist' %}bg-info
+                                {% elif user_detail.role == 'cashier' %}bg-primary
+                                {% elif user_detail.role == 'auditor' %}bg-secondary
+                                {% elif user_detail.role == 'saler' %}bg-success
+                                {% else %}bg-info{% endif %}">
+                                {{ user_detail.get_role_display }}
+                            </span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Additional Information</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 30%">Employee ID:</th>
+                            <td>{{ profile.employee_id|default:"Not assigned" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date of Birth:</th>
+                            <td>{{ profile.date_of_birth|date:"Y-m-d"|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Department:</th>
+                            <td>{{ profile.department|default:"Not assigned" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Hire Date:</th>
+                            <td>{{ profile.hire_date|date:"Y-m-d"|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Emergency Contact:</th>
+                            <td>{{ profile.emergency_contact|default:"Not provided" }}<br>
+                                Phone: {{ profile.emergency_phone|default:"Not provided" }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Address:</th>
+                            <td>{{ profile.address|default:"Not provided"|linebreaks }}</td>
+                        </tr>
+                        <tr>
+                            <th>Bio:</th>
+                            <td>{{ profile.bio|default:"No bio provided"|linebreaks }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Login:</th>
+                            <td>{{ user_detail.last_login|date:"Y-m-d H:i:s"|default:"Never" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date Joined:</th>
+                            <td>{{ user_detail.date_joined|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h3 class="card-title">Recent Activity</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in activity_logs %}
+                                <tr>
+                                    <td>{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td>{{ log.get_action_display }}</td>
+                                    <td>{{ log.description }}</td>
+                                    <td>{{ log.ip_address }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No activity records found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <a href="{% url 'accounts:user_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Users
+                </a>
+                {% if perms.auth.change_user %}
+                <a href="{% url 'accounts:user_edit' user_detail.id %}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edit User
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

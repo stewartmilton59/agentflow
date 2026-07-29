@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}{{ product.name }} - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="fas fa-capsules text-primary me-2"></i>
+                        {{ product.name }}
+                    </h4>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="{% url 'inventory:product_list' %}">Products</a></li>
+                            <li class="breadcrumb-item active">{{ product.name }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+
+            <!-- Product Status Alert -->
+            {% if product.current_stock <= 0 %}
+                <div class="alert alert-danger mb-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Out of Stock!</strong> This product is currently out of stock.
+                </div>
+            {% elif product.is_low_stock %}
+                <div class="alert alert-warning mb-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Low Stock Alert!</strong> Only {{ product.current_stock }} units remaining. Reorder level is {{ product.reorder_level }}.
+                </div>
+            {% endif %}
+
+            <div class="row">
+                <!-- Product Info Card -->
+                <div class="col-md-7">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-info-circle me-2"></i> Product Information
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="35%">Brand Name:</th>
+                                    <td><strong>{{ product.name }}</strong></td>
+                                </tr>
+                                {% if product.generic_name %}
+                                <tr>
+                                    <th>Generic Name:</th>
+                                    <td>{{ product.generic_name }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if product.batch_number %}
+                                <tr>
+                                    <th>Batch Number:</th>
+                                    <td>{{ product.batch_number }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if product.expiry_date %}
+                                <tr>
+                                    <th>Expiry Date:</th>
+                                    <td>
+                                        {{ product.expiry_date|date:"Y-m-d" }}
+                                        {% if product.expiry_date < now.date %}
+                                            <span class="badge bg-danger ms-2">Expired</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <th>SKU:</th>
+                                    <td><code>{{ product.sku }}</code></td>
+                                </tr>
+                                <tr>
+                                    <th>Product Type:</th>
+                                    <td>{{ product.get_product_type_display }}</td>
+                                </tr>
+                                {% if product.category %}
+                                <tr>
+                                    <th>Category:</th>
+                                    <td>{{ product.category.name }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if product.pack_size %}
+                                <tr>
+                                    <th>Pack Size:</th>
+                                    <td>{{ product.pack_size }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <th>Unit:</th>
+                                    <td>{{ product.unit }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    {% if product.description or product.ingredients or product.dosage %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-file-alt me-2"></i> Additional Information
+                        </div>
+                        <div class="card-body">
+                            {% if product.description %}
+                            <div class="mb-3">
+                                <strong>Description:</strong>
+                                <p class="mb-0 mt-1">{{ product.description }}</p>
+                            </div>
+                            {% endif %}
+                            {% if product.ingredients %}
+                            <div class="mb-3">
+                                <strong>Active Ingredients:</strong>
+                                <p class="mb-0 mt-1">{{ product.ingredients }}</p>
+                            </div>
+                            {% endif %}
+                            {% if product.dosage %}
+                            <div class="mb-3">
+                                <strong>Dosage:</strong>
+                                <p class="mb-0 mt-1">{{ product.dosage }}</p>
+                            </div>
+                            {% endif %}
+                            {% if product.side_effects %}
+                            <div class="mb-3">
+                                <strong>Side Effects:</strong>
+                                <p class="mb-0 mt-1">{{ product.side_effects }}</p>
+                            </div>
+                            {% endif %}
+                            {% if product.storage_conditions %}
+                            <div class="mb-3">
+                                <strong>Storage Conditions:</strong>
+                                <p class="mb-0 mt-1">{{ product.storage_conditions }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Pricing and Stock Card -->
+                <div class="col-md-5">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-chart-line me-2"></i> Pricing & Stock
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th>Buying Price:</th>
+                                    <td class="text-end">TZS {{ product.purchase_price|floatformat:2|intcomma }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Retail Price:</th>
+                                    <td class="text-end fw-bold text-primary">TZS {{ product.selling_price|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% if product.wholesale_price %}
+                                <tr>
+                                    <th>Wholesale Price:</th>
+                                    <td class="text-end">TZS {{ product.wholesale_price|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <th>Profit Margin:</th>
+                                    <td class="text-end text-success">{{ product.profit_margin|floatformat:1 }}%</td>
+                                </tr>
+                                <tr class="border-top">
+                                    <th>Current Stock:</th>
+                                    <td class="text-end">
+                                        <span class="fw-bold {% if product.current_stock <= 0 %}text-danger{% elif product.is_low_stock %}text-warning{% else %}text-success{% endif %}">
+                                            {{ product.current_stock }} {{ product.unit }}(s)
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Reorder Level:</th>
+                                    <td class="text-end">{{ product.reorder_level }} {{ product.unit }}(s)</td>
+                                </tr>
+                                <tr>
+                                    <th>Stock Value:</th>
+                                    <td class="text-end">TZS {{ product.stock_value|floatformat:2|intcomma }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-bolt me-2 text-warning"></i>
+                            Quick Actions
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{% url 'inventory:product_update' pk=product.id %}" class="btn btn-primary">
+                                    <i class="fas fa-edit me-1"></i> Edit Product
+                                </a>
+                                <!-- REMOVED: Add Batch button -->
+                                <a href="{% url 'purchases:purchase_order_create' %}" class="btn btn-success">
+                                    <i class="fas fa-shopping-cart me-1"></i> Purchase Stock
+                                </a>
+                                <a href="{% url 'inventory:stock_adjustment' %}" class="btn btn-warning">
+                                    <i class="fas fa-sliders-h me-1"></i> Adjust Stock
+                                </a>
+                                <a href="{% url 'inventory:product_delete' pk=product.id %}" class="btn btn-danger" onclick="return confirm('Delete this product?')">
+                                    <i class="fas fa-trash me-1"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prescription Info -->
+                    {% if product.prescription_required != 'none' %}
+                    <div class="card mb-4 border-warning">
+                        <div class="card-header bg-warning text-white">
+                            <i class="fas fa-prescription-bottle me-2"></i> Prescription Required
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">This product requires a valid prescription.</p>
+                            {% if product.is_controlled %}
+                            <span class="badge bg-danger mt-2">Controlled Substance</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Stock Movements -->
+            {% if movements %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="fas fa-exchange-alt me-2"></i> Recent Stock Movements
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Quantity</th>
+                                    <th>Reference</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for movement in movements %}
+                                <tr>
+                                    <td>{{ movement.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if movement.movement_type == 'purchase' %}
+                                            <span class="badge bg-success">Purchase</span>
+                                        {% elif movement.movement_type == 'sale' %}
+                                            <span class="badge bg-info">Sale</span>
+                                        {% elif movement.movement_type == 'adjustment' %}
+                                            <span class="badge bg-warning">Adjustment</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ movement.get_movement_type_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ movement.quantity }}</td>
+                                    <td>{{ movement.reference_type|default:"-" }}</td>
+                                    <td>{{ movement.notes|truncatechars:50 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

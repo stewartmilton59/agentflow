@@ -1,0 +1,36 @@
+/*
+ * Dj Urls Panel — panel-specific overrides.
+ *
+ * Everything else (layout, tables, forms, badges, code viewers, etc.) is
+ * provided by dj-control-room-base's design system
+ * (dj_control_room_base/css/design-system.css), loaded by panel_base.html.
+ */
+
+/* Monospace styling for URL/param/header inputs in the test request form. */
+.dj-urls-panel-mono {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+    font-size: 13px;
+}
+
+/* Request body editor needs more room and should resize vertically. */
+.dj-urls-panel-textarea {
+    min-height: 160px;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+/* Give icon-only "remove row" buttons (headers, query params) a bit more
+   breathing room than the design system's default square icon-only padding. */
+.dj-urls-panel-remove-row-btn {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+/* Readonly fields in the test request form (computed URL, parameter name
+   labels) should look visually distinct from editable inputs so it's clear
+   at a glance which fields can be typed into. */
+.dcr-input[readonly] {
+    background: var(--dcr-color-bg-subtle);
+    color: var(--dcr-color-text-muted);
+    cursor: default;
+}

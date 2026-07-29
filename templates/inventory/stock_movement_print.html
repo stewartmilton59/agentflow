@@ -1,0 +1,425 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Movements Report - {{ pharmacy_info.name }}</title>
+    <style>
+        :root {
+            --primary-green: {{ company.primary_color|default:'#0d5c3a' }};
+            --primary-green-dark: {{ company.primary_color|default:'#073b24' }};
+            --primary-green-light: #f0f7f3;
+            --border-color: #bcdbc8;
+            --text-dark: #1f2937;
+        }
+
+        * { box-sizing: border-box; }
+
+        @page { size: A4 portrait; margin: 0; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f6f8;
+        }
+
+        .page-container {
+            max-width: 850px;
+            min-height: 265mm;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .no-print {
+            max-width: 850px;
+            margin: 0 auto 15px auto;
+            text-align: right;
+        }
+
+        .btn-print {
+            padding: 10px 24px;
+            background-color: var(--primary-green);
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(13, 92, 58, 0.3);
+        }
+
+        .btn-print:hover { background-color: var(--primary-green-dark); }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px double var(--primary-green);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .company-logo { max-width: 80px; height: auto; }
+
+        .company-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-green);
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .company-details {
+            font-size: 11px;
+            color: #4b5563;
+            line-height: 1.4;
+        }
+
+        .meta-table {
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .meta-table td {
+            padding: 2px 8px;
+            text-align: right;
+        }
+
+        .meta-table td.label {
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+        }
+
+        .report-title-box {
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary-green);
+            background-color: var(--primary-green-light);
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border-radius: 2px;
+        }
+
+        .report-title { font-size: 16px; font-weight: bold; color: var(--primary-green); }
+
+        .report-subtitle { font-size: 11px; color: #4b5563; margin-top: 4px; }
+
+        .movement-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        .movement-table th {
+            background-color: var(--primary-green);
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 8px 5px;
+            border: 1px solid var(--primary-green);
+        }
+
+        .movement-table td {
+            font-size: 10px;
+            padding: 6px 5px;
+            border-bottom: 1px solid var(--border-color);
+            border-left: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+            color: #1f2937;
+        }
+
+        .movement-table tbody tr:nth-child(even) { background-color: #fafdfb; }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        .badge-type {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 8px;
+            font-weight: bold;
+            border-radius: 2px;
+            text-transform: uppercase;
+        }
+        .badge-purchase { background-color: #d1fae5; color: #065f46; }
+        .badge-sale { background-color: #dbeafe; color: #1e40af; }
+        .badge-return { background-color: #cffafe; color: #0e7490; }
+        .badge-adjustment { background-color: #fef3c7; color: #92400e; }
+        .badge-transfer { background-color: #f3e8ff; color: #6b21a8; }
+        .badge-expired { background-color: #fce4ec; color: #c62828; }
+        .badge-damaged { background-color: #fce4ec; color: #c62828; }
+
+        .qty-positive { color: #065f46; font-weight: bold; }
+        .qty-negative { color: #dc2626; font-weight: bold; }
+
+        .summary-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 2px solid var(--primary-green);
+        }
+
+        .summary-box {
+            border: 1px solid var(--border-color);
+            background-color: var(--primary-green-light);
+            padding: 12px 16px;
+            border-radius: 4px;
+            min-width: 220px;
+        }
+
+        .summary-box h4 {
+            margin: 0 0 8px 0;
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 2px 0;
+        }
+
+        .summary-row.total {
+            font-weight: bold;
+            font-size: 12px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 4px;
+            margin-top: 4px;
+            color: var(--primary-green);
+        }
+
+        .filter-summary {
+            font-size: 10px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .footer-section {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .payment-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+        }
+
+        .bank-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .bank-card {
+            border: 1px solid var(--border-color);
+            background-color: var(--primary-green-light);
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .bank-name {
+            font-weight: bold;
+            color: var(--primary-green);
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        @media print {
+            @page { margin: 0; }
+
+            body {
+                padding: 15mm 20mm;
+                background-color: #ffffff;
+                margin: 0;
+            }
+
+            .no-print { display: none !important; }
+
+            .page-container {
+                box-shadow: none;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
+                min-height: 250mm;
+            }
+
+            .movement-table th {
+                background-color: var(--primary-green) !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .report-title-box, .bank-card, .badge-type, .summary-box, .movement-table tbody tr:nth-child(even) {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <button onclick="window.print()" class="btn-print">
+            <i class="fas fa-print"></i> Print Report
+        </button>
+    </div>
+
+    <div class="page-container">
+
+        <!-- Header Section -->
+        <div class="header-container">
+            <div class="brand-section">
+                {% if company and company.logo %}
+                    <img src="{{ company.logo.url }}" alt="Pharmacy Logo" class="company-logo">
+                {% else %}
+                    <img src="{% static 'img/logo.png' %}" alt="Pharmacy Logo" class="company-logo">
+                {% endif %}
+                <div>
+                    <div class="company-title">{{ pharmacy_info.name }}</div>
+                    <div class="company-details">
+                        {% if pharmacy_info.p_o_box %}P.O.BOX {{ pharmacy_info.p_o_box }}{% endif %}
+                        {% if pharmacy_info.location %}, {{ pharmacy_info.location }}{% endif %}<br>
+                        Tel: {{ pharmacy_info.phone }} | Email: {{ pharmacy_info.email }}
+                    </div>
+                </div>
+            </div>
+            <div>
+                <table class="meta-table">
+                    <tr>
+                        <td class="label">Date:</td>
+                        <td>{{ report_date }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Report:</td>
+                        <td><strong>STOCK MOVEMENTS</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label">TIN:</td>
+                        <td>{{ pharmacy_info.tin }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Total Items:</td>
+                        <td>{{ total_movements }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Report Info Box -->
+        <div class="report-title-box">
+            <div class="report-title">Stock Movements Report</div>
+            <div class="report-subtitle">
+                Generated by: {{ generated_by }}
+                {% if date_from or date_to %}
+                    | Period: {% if date_from %}{{ date_from }}{% endif %} {% if date_to %}to {{ date_to }}{% endif %}
+                {% endif %}
+                {% if selected_type %} | Type: {{ selected_type }}{% endif %}
+                {% if product_query %} | Product: {{ product_query }}{% endif %}
+            </div>
+        </div>
+
+        <!-- Movements Table -->
+        <table class="movement-table">
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 4%;">#</th>
+                    <th style="width: 14%;">DATE & TIME</th>
+                    <th style="width: 22%;">PRODUCT</th>
+                    <th class="text-center" style="width: 10%;">TYPE</th>
+                    <th class="text-center" style="width: 8%;">QTY</th>
+                    <th class="text-center" style="width: 9%;">PREV STOCK</th>
+                    <th class="text-center" style="width: 9%;">NEW STOCK</th>
+                    <th class="text-right" style="width: 11%;">UNIT PRICE</th>
+                    <th class="text-right" style="width: 13%;">TOTAL AMOUNT</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for movement in movements %}
+                <tr>
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td>{{ movement.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <strong>{{ movement.product.name }}</strong>
+                        {% if movement.product.sku %}
+                            <br><span style="font-size: 8px; color: #6b7280;">{{ movement.product.sku }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge-type badge-{{ movement.movement_type }}">
+                            {{ movement.get_movement_type_display }}
+                        </span>
+                    </td>
+                    <td class="text-center {% if movement.movement_type == 'purchase' or movement.movement_type == 'return' %}qty-positive{% elif movement.movement_type == 'sale' %}qty-negative{% endif %}">
+                        {{ movement.quantity }}
+                    </td>
+                    <td class="text-center">{{ movement.previous_quantity }}</td>
+                    <td class="text-center">{{ movement.new_quantity }}</td>
+                    <td class="text-right">
+                        {% if movement.unit_price %}TSh {{ movement.unit_price|floatformat:0|intcomma }}{% else %}-{% endif %}
+                    </td>
+                    <td class="text-right">
+                        {% if movement.total_amount %}TSh {{ movement.total_amount|floatformat:0|intcomma }}{% else %}-{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center" style="padding: 30px; color: #6b7280;">
+                        No stock movements found for the selected criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if type_breakdown %}
+        <div style="margin-top: 15px; font-size: 10px; color: #6b7280;">
+            <strong style="color: var(--primary-green);">Breakdown by Type:</strong>
+            {% for item in type_breakdown %}
+                <span style="margin-right: 15px;">{{ item.type }}: {{ item.count }} items ({{ item.total_qty }} qty{% if item.total_amt %}, TSh {{ item.total_amt|floatformat:0|intcomma }}{% endif %})</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 10px; color: #6b7280;">
+                <strong>{{ pharmacy_info.name }}</strong> |
+                {% if pharmacy_info.p_o_box %}P.O.BOX {{ pharmacy_info.p_o_box }}{% endif %}
+                {% if pharmacy_info.location %}, {{ pharmacy_info.location }}{% endif %} |
+                Tel: {{ pharmacy_info.phone }} | Email: {{ pharmacy_info.email }}
+                {% if pharmacy_info.tin %} | TIN: {{ pharmacy_info.tin }}{% endif %}
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

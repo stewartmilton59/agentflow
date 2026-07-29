@@ -1,0 +1,358 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Purchase Order {{ order.po_number }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 1.5cm;
+            margin-bottom: 2cm;
+
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                left: 1.5cm;
+                width: 18cm;
+                top: 27cm;
+                height: 1cm;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            color: #1f2937;
+            line-height: 1.4;
+        }
+
+        .header {
+            border-bottom: 2px solid {{ company.primary_color|default:'#0d5c3a' }};
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: {{ company.primary_color|default:'#0d5c3a' }};
+            font-size: 18pt;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+        }
+
+        .header .subtitle {
+            font-size: 9pt;
+            color: #4b5563;
+            margin: 2px 0 0 0;
+        }
+
+        .company-info {
+            text-align: right;
+            font-size: 9pt;
+            color: #4b5563;
+            margin-bottom: 10px;
+        }
+
+        .company-info strong {
+            color: #1f2937;
+            font-size: 11pt;
+        }
+
+        .meta-info {
+            width: 100%;
+            font-size: 9pt;
+            color: #4b5563;
+            margin-bottom: 15px;
+        }
+
+        .meta-info td {
+            padding: 3px 0;
+            vertical-align: top;
+        }
+
+        .meta-info th {
+            width: 130px;
+            font-weight: bold;
+            color: #374151;
+            text-align: left;
+            padding: 3px 8px 3px 0;
+        }
+
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: {{ company.primary_color|default:'#0d5c3a' }};
+            border-bottom: 1px solid {{ company.primary_color|default:'#0d5c3a' }};
+            padding-bottom: 4px;
+            margin: 18px 0 10px 0;
+            text-transform: uppercase;
+        }
+
+        table.items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        table.items-table th {
+            background-color: {{ company.primary_color|default:'#0d5c3a' }};
+            color: #ffffff;
+            font-size: 8pt;
+            font-weight: bold;
+            padding: 7px 5px;
+            text-transform: uppercase;
+            text-align: left;
+        }
+
+        table.items-table td {
+            padding: 5px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 9pt;
+        }
+
+        table.items-table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-bold { font-weight: bold; }
+
+        .totals-table {
+            width: 50%;
+            margin-left: auto;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+
+        .totals-table td {
+            padding: 5px 10px;
+            font-size: 10pt;
+        }
+
+        .totals-table .label-cell {
+            text-align: right;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .totals-table .value-cell {
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .totals-table .grand-total td {
+            border-top: 2px solid {{ company.primary_color|default:'#0d5c3a' }};
+            color: {{ company.primary_color|default:'#0d5c3a' }};
+            font-size: 12pt;
+            font-weight: bold;
+            padding-top: 8px;
+        }
+
+        .notes-box {
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 9pt;
+            color: #4b5563;
+            background: #f9fafb;
+        }
+
+        .notes-box strong {
+            color: #374151;
+        }
+
+        .signature-block {
+            margin-top: 40px;
+            font-size: 9pt;
+        }
+
+        .signature-line {
+            border-top: 1px solid #000;
+            width: 200px;
+            margin-top: 40px;
+            margin-bottom: 4px;
+        }
+
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-cancelled {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-draft {
+            background-color: #fed7aa;
+            color: #9b2c1d;
+        }
+
+        #footer_content {
+            text-align: right;
+            font-size: 8pt;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="footer_content">
+        Page <pdf:pagenumber/> of <pdf:pagecount/>
+    </div>
+
+    <!-- Company Info -->
+    <div class="company-info">
+        <strong>{{ company.name|default:"Company" }}</strong><br>
+        {% if company.address %}{{ company.address }}<br>{% endif %}
+        {% if company.city %}{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}<br>{% endif %}
+        {% if company.postal_code %}P.O. Box {{ company.postal_code }}<br>{% endif %}
+        {% if company.phone %}Tel: {{ company.phone }}{% endif %}
+        {% if company.email %} | {{ company.email }}{% endif %}
+        {% if company.tax_id %}<br>TIN: {{ company.tax_id }}{% endif %}
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Purchase Order</h1>
+        <p class="subtitle">Generated on {% now "d/m/Y H:i" %}</p>
+    </div>
+
+    <!-- Order Meta -->
+    <table class="meta-info">
+        <tr>
+            <th>PO Number:</th>
+            <td class="text-bold">{{ order.po_number }}</td>
+            <th>Order Date:</th>
+            <td>{{ order.order_date|date:"d/m/Y H:i" }}</td>
+        </tr>
+        <tr>
+            <th>Invoice No:</th>
+            <td>{{ order.invoice_number|default:"N/A" }}</td>
+            <th>Status:</th>
+            <td>
+                {% if order.status == 'completed' %}
+                    <span class="status-badge status-completed">Completed</span>
+                {% elif order.status == 'cancelled' %}
+                    <span class="status-badge status-cancelled">Cancelled</span>
+                {% else %}
+                    <span class="status-badge status-draft">Draft</span>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Supplier:</th>
+            <td>{{ order.supplier_name|default:"N/A" }}</td>
+            <th>Created By:</th>
+            <td>
+                {% if order.created_by %}
+                    {{ order.created_by.get_full_name|default:order.created_by.username }}
+                {% else %}
+                    System
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <!-- Items Table -->
+    <div class="section-title">Order Items</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th width="3%" class="text-center">#</th>
+                <th width="25%">Product</th>
+                <th width="7%" class="text-center">Qty</th>
+                <th width="12%" class="text-right">Unit Price</th>
+                <th width="12%" class="text-right">Selling Price</th>
+                <th width="7%" class="text-center">Markup</th>
+                <th width="10%" class="text-center">Batch</th>
+                <th width="10%" class="text-center">Expiry</th>
+                <th width="14%" class="text-right">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>
+                    <strong>{{ item.product.name }}</strong>
+                    {% if item.product.sku %}
+                        <br><span style="font-size: 8pt; color: #6b7280;">SKU: {{ item.product.sku }}</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">{{ item.quantity|intcomma }}</td>
+                <td class="text-right">{{ item.unit_price|floatformat:2|intcomma }}</td>
+                <td class="text-right">{{ item.selling_price|floatformat:2|intcomma }}</td>
+                <td class="text-center">{{ item.markup_percent|floatformat:2 }}%</td>
+                <td class="text-center">{{ item.batch_number|default:"-" }}</td>
+                <td class="text-center">
+                    {% if item.expiry_date %}
+                        {{ item.expiry_date|date:"d/m/Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="text-right text-bold">{{ item.subtotal|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totals -->
+    <table class="totals-table">
+        <tr>
+            <td class="label-cell">Subtotal:</td>
+            <td class="value-cell">{{ company.currency_symbol|default:'TSh' }} {{ order.subtotal|floatformat:2|intcomma }}</td>
+        </tr>
+        <tr class="grand-total">
+            <td class="label-cell">Total Amount:</td>
+            <td class="value-cell">{{ company.currency_symbol|default:'TSh' }} {{ order.total_amount|floatformat:2|intcomma }}</td>
+        </tr>
+    </table>
+
+    <!-- Notes -->
+    {% if order.notes %}
+    <div class="notes-box">
+        <strong>Notes / Comments:</strong><br>
+        {{ order.notes|linebreaksbr }}
+    </div>
+    {% endif %}
+
+    <!-- Signature Block -->
+    <div class="signature-block">
+        <div class="row" style="display: flex; justify-content: space-between;">
+            <div style="width: 45%;">
+                <div class="signature-line"></div>
+                <p style="margin: 4px 0 0 0; font-weight: bold;">Prepared By</p>
+                <p style="margin: 0; color: #6b7280;">
+                    {% if order.created_by %}
+                        {{ order.created_by.get_full_name|default:order.created_by.username }}
+                    {% else %}
+                        ___________________
+                    {% endif %}
+                </p>
+            </div>
+            <div style="width: 45%; text-align: right;">
+                <div class="signature-line" style="margin-left: auto;"></div>
+                <p style="margin: 4px 0 0 0; font-weight: bold;">Authorized Signature</p>
+                <p style="margin: 0; color: #6b7280;">Date: _______________</p>
+            </div>
+        </div>
+        <!-- Company Stamp -->
+        <div style="text-align: center; margin-top: 20px;">
+            <p style="font-size: 8pt; color: #9ca3af;">
+                {{ company.name|default:'Company' }} | {{ company.phone|default:'Tel: _______________' }}
+            </p>
+        </div>
+    </div>
+
+</body>
+</html>

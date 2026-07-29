@@ -1,0 +1,348 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Delivery Note - {{ delivery_note_number }}</title>
+    <style>
+        :root {
+            --primary-green: {{ company.primary_color|default:'#0d5c3a' }};
+            --primary-green-dark: {{ company.primary_color|default:'#073b24' }};
+            --primary-green-light: #f0f7f3;
+            --border-color: #bcdbc8;
+            --text-dark: #1f2937;
+        }
+
+        * { box-sizing: border-box; }
+
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f6f8;
+        }
+
+        .page-container {
+            max-width: 850px;
+            min-height: 265mm;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .content-body { flex-grow: 1; }
+
+        .no-print {
+            max-width: 850px;
+            margin: 0 auto 15px auto;
+            text-align: right;
+        }
+
+        .btn-print {
+            padding: 10px 24px;
+            background-color: var(--primary-green);
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(13, 92, 58, 0.3);
+            transition: background-color 0.2s;
+        }
+
+        .btn-print:hover { background-color: var(--primary-green-dark); }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px double var(--primary-green);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .company-logo {
+            max-width: 80px;
+            height: auto;
+        }
+
+        .company-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--primary-green);
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .doc-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: right;
+        }
+
+        .meta-table {
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .meta-table td {
+            padding: 3px 8px;
+            text-align: right;
+        }
+
+        .meta-table td.label {
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+        }
+
+        .delivery-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-box {
+            border: 1px solid var(--border-color);
+            background-color: var(--primary-green-light);
+            padding: 12px 16px;
+            border-radius: 3px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .box-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 3px;
+        }
+
+        .delivery-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        .delivery-table th {
+            background-color: var(--primary-green);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 8px;
+            border: 1px solid var(--primary-green);
+        }
+
+        .delivery-table td {
+            font-size: 12px;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border-color);
+            border-left: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+            color: #1f2937;
+        }
+
+        .delivery-table tbody tr:nth-child(even) { background-color: #fafdfb; }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        .signatures-section {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .sig-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .sig-card {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 4px;
+            background-color: #ffffff;
+        }
+
+        .sig-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            margin-bottom: 35px;
+        }
+
+        .sig-line {
+            border-top: 1px solid var(--text-dark);
+            margin-top: 10px;
+            font-size: 11px;
+            color: #4b5563;
+            padding-top: 4px;
+        }
+
+        @media print {
+            @page { margin: 0; }
+            body { padding: 15mm 20mm; background-color: #ffffff; margin: 0; }
+            .no-print { display: none !important; }
+            .page-container { box-shadow: none; padding: 0; width: 100%; max-width: 100%; min-height: 250mm; }
+            .delivery-table th { 
+                background-color: var(--primary-green) !important; 
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
+            .info-box, .sig-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Print Action -->
+    <div class="no-print">
+        <button onclick="window.print()" class="btn-print">Print Delivery Note</button>
+    </div>
+
+    <div class="page-container">
+        <div class="content-body">
+            
+            <!-- Header Section -->
+            <div class="header-container">
+                <div class="brand-section">
+                    {% if company and company.logo %}
+                        <img src="{{ company.logo.url }}" alt="Logo" class="company-logo">
+                    {% else %}
+                        <img src="{% static 'img/logo.png' %}" alt="Logo" class="company-logo">
+                    {% endif %}
+                    <div>
+                        <div class="company-title">{{ pharmacy_info.name }}</div>
+                        <div style="font-size:12px; color:#4b5563;">
+                            {{ pharmacy_info.p_o_box }}{% if pharmacy_info.location %}<br>{{ pharmacy_info.location }}{% endif %}<br>Tel: {{ pharmacy_info.phone }} | Email: {{ pharmacy_info.email }}
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="doc-title">Delivery Note</div>
+                    <table class="meta-table">
+                        <tr>
+                            <td class="label">DN No:</td>
+                            <td><strong>{{ delivery_note_number }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="label">Date:</td>
+                            <td>{{ dispatch_date }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Ref Invoice:</td>
+                            <td>{{ sale.invoice_number }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Customer & Shipping Info -->
+            <div class="delivery-grid">
+                <div class="info-box">
+                    <div class="box-title">Deliver To</div>
+                    <strong>Customer:</strong> {{ customer_name }}<br>
+                    <strong>Address:</strong> {{ delivery_address }}<br>
+                    <strong>Phone:</strong> {{ customer_phone|default:"N/A" }}
+                </div>
+                <div class="info-box">
+                    <div class="box-title">Dispatch Details</div>
+                    <strong>Dispatched By:</strong> {{ dispatched_by }}<br>
+                    <strong>Dispatch Date:</strong> {{ dispatch_date }}<br>
+                    <strong>Status:</strong> Goods Dispatched
+                </div>
+            </div>
+
+            <!-- Goods Table -->
+            <table class="delivery-table">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 6%;">S/NO</th>
+                        <th style="width: 38%;">PRODUCT DESCRIPTION</th>
+                        <th class="text-center" style="width: 12%;">PACK SIZE</th>
+                        <th class="text-center" style="width: 14%;">BATCH NO.</th>
+                        <th class="text-center" style="width: 12%;">EXP DATE</th>
+                        <th class="text-center" style="width: 9%;">UNIT</th>
+                        <th class="text-center" style="width: 9%;">QTY</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="text-center">{{ item.s_no }}</td>
+                        <td><strong>{{ item.name }}</strong></td>
+                        <td class="text-center">{{ item.pack }}</td>
+                        <td class="text-center">{{ item.batch }}</td>
+                        <td class="text-center">{{ item.exp }}</td>
+                        <td class="text-center">{{ item.unit }}</td>
+                        <td class="text-center"><strong>{{ item.quantity }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div style="font-size: 11px; color: #6b7280; font-style: italic; margin-top: 10px;">
+                * Please verify all items, batch numbers, and quantities upon receipt. Notify us immediately of any discrepancies.
+            </div>
+
+        </div>
+
+        <!-- Signature Block Anchored to Bottom -->
+        <div class="signatures-section">
+            <div class="sig-grid">
+                <div class="sig-card">
+                    <div class="sig-title">Dispatched By</div>
+                    <div class="sig-line">Signature & Date</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-title">Delivered By (Driver/Carrier)</div>
+                    <div class="sig-line">Signature & Date</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-title">Received In Good Condition By</div>
+                    <div class="sig-line">Name, Signature & Stamp</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

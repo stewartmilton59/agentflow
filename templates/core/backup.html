@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Database Backup{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-plus-circle me-2 text-success"></i>Create New Backup</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> This will create a backup of your database. The backup will be stored in the backups directory.
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-database"></i> Create Backup
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-database me-2 text-info"></i>Existing Backups</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Backup Name</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Size</th>
+                                    <th>Created By</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for backup in backups %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file-archive"></i> {{ backup.name }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ backup.get_backup_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        {% if backup.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif backup.status == 'running' %}
+                                            <span class="badge bg-warning">Running</span>
+                                        {% elif backup.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                            {% if backup.error_message %}
+                                                <br><small class="text-danger">{{ backup.error_message }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ backup.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if backup.file_size %}
+                                            {{ backup.file_size|filesizeformat }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ backup.created_by.get_full_name|default:backup.created_by.username }}</td>
+                                    <td>{{ backup.started_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            {% if backup.file_path and backup.status == 'completed' %}
+                                            <a href="{{ backup.file_path }}" class="btn btn-success" download>
+                                                <i class="fas fa-download"></i> Download
+                                            </a>
+                                            {% endif %}
+                                            <form method="post" action="{% url 'core:delete_backup' backup.id %}"
+                                                  onsubmit="return confirm('Are you sure you want to delete this backup?');"
+                                                  style="display: inline-block;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No backups found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h3 class="card-title">Backup Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Important Information</h5>
+                        <ul class="mb-0">
+                            <li>Regular backups are recommended to prevent data loss</li>
+                            <li>Backups are stored on the server and should be downloaded for safekeeping</li>
+                            <li>Older backups should be deleted to save storage space</li>
+                            <li>Always verify that backups are working properly</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-lightbulb"></i> Best Practices</h5>
+                        <ul class="mb-0">
+                            <li>Create backups daily or weekly depending on your data volume</li>
+                            <li>Keep at least 3 recent backups</li>
+                            <li>Store backups in a secure location</li>
+                            <li>Test backup restoration periodically</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Low Stock Report - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-exclamation-triangle text-warning me-2"></i>Low Stock Report
+            </h2>
+            <p class="text-muted mb-0">Products that need reordering</p>
+        </div>
+        <div>
+            <!-- PDF Export Button -->
+            <a href="{% url 'inventory:export_low_stock_pdf' %}" class="btn btn-outline-danger me-2" target="_blank">
+                <i class="fas fa-file-pdf me-1"></i>Export PDF
+            </a>
+            <!-- Excel Export Button -->
+            <a href="{% url 'inventory:export_low_stock_excel' %}" class="btn btn-outline-success me-2">
+                <i class="fas fa-file-excel me-1"></i>Export Excel
+            </a>
+            <!-- Print Button -->
+
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-list me-2"></i>Products Below Reorder Level
+        </div>
+        <div class="card-body">
+            {% if products %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>SKU</th>
+                            <th>Category</th>
+                            <th>Current Stock</th>
+                            <th>Reorder Level</th>
+                            <th>Shortage</th>
+                            <th>Supplier</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <strong>{{ product.name }}</strong>
+                                {% if product.generic_name %}
+                                    <br><small class="text-muted">{{ product.generic_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td><code>{{ product.sku }}</code></td>
+                            <td>{{ product.category.name|default:"-" }}</td>
+                            <td class="text-danger fw-bold">{{ product.current_stock }} {{ product.unit }}</td>
+                            <td>{{ product.reorder_level }} {{ product.unit }}</td>
+                            <td>{{ product.reorder_quantity|default:product.reorder_level }} {{ product.unit }}</td>
+                            <td>{{ product.supplier.name|default:"-" }}</td>
+                            <td>
+                                <a href="{% url 'purchases:purchase_order_create' %}?product={{ product.id }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-shopping-cart me-1"></i>Reorder
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5 class="text-muted">No low stock products found!</h5>
+                <p class="text-muted mb-0">All products are at healthy stock levels</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

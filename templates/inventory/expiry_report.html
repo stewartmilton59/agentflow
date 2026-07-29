@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Adjust Stock - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-sliders-h text-primary me-2"></i>Adjust Stock
+                    </h2>
+                    <p class="text-muted">Adjust inventory levels for damaged, expired, or miscount items</p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:stock_movement' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-edit me-2"></i>Stock Adjustment Form
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> Positive quantity increases stock, negative quantity decreases stock.
+                        </div>
+                        
+                        {{ form|crispy }}
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Apply Adjustment
+                            </button>
+                            <a href="{% url 'inventory:stock_movement' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Current Stock Info -->
+            <div class="card mt-4" id="stock-info" style="display: none;">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-info-circle me-2"></i>Current Stock Information
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Product:</strong> <span id="info-product-name"></span><br>
+                            <strong>SKU:</strong> <span id="info-product-sku"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Current Stock:</strong> <span id="info-current-stock"></span><br>
+                            <strong>Unit:</strong> <span id="info-unit"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fetch product details when product is selected
+    document.getElementById('id_product')?.addEventListener('change', function() {
+        const productId = this.value;
+        if (productId) {
+            fetch(`/inventory/api/product/${productId}/stock/`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('info-product-name').textContent = data.name;
+                    document.getElementById('info-product-sku').textContent = data.sku;
+                    document.getElementById('info-current-stock').textContent = `${data.current_stock} ${data.unit}`;
+                    document.getElementById('info-unit').textContent = data.unit;
+                    document.getElementById('stock-info').style.display = 'block';
+                    
+                    // Update batch dropdown if applicable
+                    if (data.has_batches) {
+                        const batchSelect = document.getElementById('id_batch');
+                        batchSelect.innerHTML = '<option value="">Select Batch</option>';
+                        data.batches.forEach(batch => {
+                            batchSelect.innerHTML += `<option value="${batch.id}">${batch.batch_number} (Exp: ${batch.expiry_date}, Stock: ${batch.remaining_quantity})</option>`;
+                        });
+                    }
+                });
+        } else {
+            document.getElementById('stock-info').style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

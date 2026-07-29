@@ -1,0 +1,432 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Convert Proforma to Sale - PharmaFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .proforma-header {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    .proforma-badge {
+        background: rgba(255,255,255,0.2);
+        border: 2px solid white;
+        border-radius: 10px;
+        padding: 8px 20px;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    .stock-status-card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .stock-ok {
+        border-left: 5px solid #27ae60;
+    }
+    .stock-low {
+        border-left: 5px solid #e74c3c;
+    }
+    .item-row {
+        transition: all 0.2s;
+    }
+    .item-row:hover {
+        background-color: #f8f9fc;
+    }
+    .payment-section {
+        background: #f8f9fc;
+        border-radius: 15px;
+        padding: 25px;
+    }
+    .convert-btn {
+        background: linear-gradient(135deg, #27ae60 0%, #219a52 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 15px 40px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .convert-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(39, 174, 96, 0.4);
+    }
+    .convert-btn:disabled {
+        background: #95a5a6;
+        transform: none;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
+    .warning-banner {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 10px;
+        padding: 15px 20px;
+    }
+    .success-banner {
+        background: #d4edda;
+        border: 1px solid #28a745;
+        border-radius: 10px;
+        padding: 15px 20px;
+    }
+    .total-display {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    .customer-info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="proforma-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-2"><i class="fas fa-exchange-alt me-2"></i>Convert Proforma to Sale</h4>
+            <p class="mb-0 opacity-75">Review stock availability and process payment to convert this quotation into a live sale.</p>
+        </div>
+        <div class="proforma-badge">
+            <i class="fas fa-file-invoice me-2"></i>{{ proforma.invoice_number }}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Proforma Details & Stock Check -->
+        <div class="col-lg-8">
+            <!-- Customer Info -->
+            <div class="customer-info-card mb-4">
+                <h6 class="text-muted text-uppercase mb-3"><i class="fas fa-user me-2"></i>Customer Information</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Name:</strong></p>
+                        <p class="fs-5">
+                            {% if proforma.customer %}
+                                {{ proforma.customer.get_full_name }}
+                            {% else %}
+                                {{ proforma.customer_name|default:"Walk-in Customer" }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Date Issued:</strong></p>
+                        <p class="fs-5">{{ proforma.sale_date|date:"F d, Y H:i" }}</p>
+                    </div>
+                </div>
+                {% if proforma.customer %}
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <small class="text-muted">Phone</small>
+                        <p class="mb-0">{{ proforma.customer.phone_number|default:"N/A" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">TIN</small>
+                        <p class="mb-0">{{ proforma.customer.tin|default:"N/A" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Customer Type</small>
+                        <p class="mb-0">
+                            <span class="badge bg-info">{{ proforma.customer.get_customer_type_display }}</span>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Stock Availability Check -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-boxes me-2 text-primary"></i>Stock Availability Check</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if has_insufficient_stock %}
+                    <div class="warning-banner m-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle text-warning fa-2x me-3"></i>
+                            <div>
+                                <h6 class="mb-1 text-warning fw-bold">Insufficient Stock Detected</h6>
+                                <p class="mb-0">Some items do not have enough stock to fulfill this order. You cannot convert until stock is available.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="success-banner m-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success fa-2x me-3"></i>
+                            <div>
+                                <h6 class="mb-1 text-success fw-bold">All Items Available</h6>
+                                <p class="mb-0">Sufficient stock is available for all items in this proforma. Ready to convert.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%">#</th>
+                                    <th style="width: 35%">Product</th>
+                                    <th style="width: 15%" class="text-center">Required</th>
+                                    <th style="width: 15%" class="text-center">Available</th>
+                                    <th style="width: 15%" class="text-center">After Sale</th>
+                                    <th style="width: 15%">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in stock_status %}
+                                <tr class="item-row {% if item.is_enough %}stock-ok{% else %}stock-low{% endif %}">
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ item.product_name }}</strong>
+                                    </td>
+                                    <td class="text-center fw-bold">{{ item.required }}</td>
+                                    <td class="text-center">{{ item.available }}</td>
+                                    <td class="text-center">
+                                        {% if item.is_enough %}
+                                            <span class="text-success fw-bold">{{ item.available|add:item.required_negative }}</span>
+                                        {% else %}
+                                            <span class="text-danger fw-bold">{{ item.available|add:item.required_negative }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.is_enough %}
+                                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>Available</span>
+                                        {% else %}
+                                            <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Shortage</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proforma Items Summary -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Proforma Items</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in proforma.items.all %}
+                                <tr class="item-row">
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ item.product.name }}</strong><br>
+                                        <small class="text-muted">SKU: {{ item.product.sku|default:"N/A" }}</small>
+                                    </td>
+                                    <td class="text-center">{{ item.quantity }}</td>
+                                    <td class="text-end">TZS {{ item.unit_price|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-bold">TZS {{ item.subtotal|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-group-divider">
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">Subtotal:</td>
+                                    <td class="text-end fw-bold">TZS {{ proforma.subtotal|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% if proforma.discount_amount > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end text-muted">Discount:</td>
+                                    <td class="text-end text-muted">-TZS {{ proforma.discount_amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if proforma.tax_amount > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end text-muted">Tax:</td>
+                                    <td class="text-end text-muted">TZS {{ proforma.tax_amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="table-primary">
+                                    <td colspan="4" class="text-end fs-5 fw-bold">Grand Total:</td>
+                                    <td class="text-end fs-5 fw-bold text-primary">TZS {{ proforma.total_amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Conversion Form -->
+        <div class="col-lg-4">
+            <div class="payment-section sticky-top" style="top: 20px;">
+                <h5 class="mb-4"><i class="fas fa-credit-card me-2 text-primary"></i>Payment & Conversion</h5>
+
+                <!-- Total Display -->
+                <div class="text-center mb-4 p-3 bg-white rounded">
+                    <small class="text-muted d-block mb-1">Amount Due</small>
+                    <div class="total-display">TZS {{ proforma.total_amount|floatformat:2|intcomma }}</div>
+                </div>
+
+                <hr class="my-4">
+
+                {% if has_insufficient_stock %}
+                <!-- Blocked: Insufficient Stock -->
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-ban fa-2x mb-2 d-block"></i>
+                    <h6 class="fw-bold">Cannot Convert</h6>
+                    <p class="mb-0 small">Restock the items marked with shortage above, then return to convert this proforma.</p>
+                </div>
+                <a href="{% url 'sales:proforma_list' %}" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Proformas
+                </a>
+
+                {% else %}
+                <!-- Conversion Form -->
+                <form method="post" id="convertForm">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Payment Method</label>
+                        <select name="payment_method" class="form-select form-select-lg" id="paymentMethod">
+                            <option value="cash" selected>Cash</option>
+                            <option value="card">Card</option>
+                            <option value="mobile_money">Mobile Money</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Payment Amount (TZS)</label>
+                        <input type="number" name="payment_amount" class="form-control form-control-lg"
+                               id="paymentAmount" step="0.01" min="0" max="{{ proforma.total_amount }}"
+                               value="{{ proforma.total_amount }}" placeholder="0.00">
+                        <div class="form-text">
+                            Enter <strong>{{ proforma.total_amount|floatformat:2 }}</strong> for full payment, or less for a credit sale.
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="balanceInfo" style="display: none;">
+                        <div class="alert alert-info py-2">
+                            <small><i class="fas fa-info-circle me-1"></i>
+                            Remaining <strong id="remainingBalance">0.00</strong> will be recorded as credit.</small>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success convert-btn w-100" id="convertBtn">
+                            <i class="fas fa-exchange-alt me-2"></i>Convert to Sale
+                        </button>
+                        <a href="{% url 'sales:proforma_receipt' proforma.id %}" class="btn btn-outline-warning text-dark fw-bold" target="_blank">
+                            <i class="fas fa-print me-2"></i>Print Proforma First
+                        </a>
+                        <a href="{% url 'sales:proforma_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel & Go Back
+                        </a>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentAmountInput = document.getElementById('paymentAmount');
+    const paymentMethodSelect = document.getElementById('paymentMethod');
+    const balanceInfo = document.getElementById('balanceInfo');
+    const remainingBalanceEl = document.getElementById('remainingBalance');
+    const convertBtn = document.getElementById('convertBtn');
+    const grandTotal = parseFloat('{{ proforma.total_amount }}');
+
+    function updateBalance() {
+        const paymentAmount = parseFloat(paymentAmountInput.value) || 0;
+        const remaining = grandTotal - paymentAmount;
+
+        if (remaining > 0 && paymentAmount > 0) {
+            balanceInfo.style.display = 'block';
+            remainingBalanceEl.textContent = 'TZS ' + remaining.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            convertBtn.innerHTML = '<i class="fas fa-exchange-alt me-2"></i>Convert to Credit Sale';
+        } else if (remaining > 0 && paymentAmount === 0) {
+            balanceInfo.style.display = 'block';
+            remainingBalanceEl.textContent = 'TZS ' + grandTotal.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            convertBtn.innerHTML = '<i class="fas fa-exchange-alt me-2"></i>Convert to Full Credit';
+        } else {
+            balanceInfo.style.display = 'none';
+            convertBtn.innerHTML = '<i class="fas fa-exchange-alt me-2"></i>Convert to Sale';
+        }
+    }
+
+    if (paymentAmountInput) {
+        paymentAmountInput.addEventListener('input', updateBalance);
+    }
+
+    // Form validation
+    const convertForm = document.getElementById('convertForm');
+    if (convertForm) {
+        convertForm.addEventListener('submit', function(e) {
+            const paymentAmount = parseFloat(paymentAmountInput.value) || 0;
+
+            if (paymentAmount < 0) {
+                e.preventDefault();
+                alert('Payment amount cannot be negative.');
+                return false;
+            }
+
+            if (paymentAmount > grandTotal) {
+                e.preventDefault();
+                alert('Payment amount cannot exceed the total amount of TZS ' + grandTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }));
+                return false;
+            }
+
+            const remaining = grandTotal - paymentAmount;
+            if (remaining > 0) {
+                if (!confirm('This will create a credit sale with remaining balance of TZS ' + remaining.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }) + '. Continue?')) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+
+            convertBtn.disabled = true;
+            convertBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Converting...';
+        });
+    }
+
+    // Initial update
+    updateBalance();
+});
+</script>
+{% endblock %}

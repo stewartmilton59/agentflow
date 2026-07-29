@@ -1,0 +1,425 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Receipt - {{ invoice_number }}</title>
+    <style>
+        :root {
+            --primary-green: {{ company.primary_color|default:'#0d5c3a' }};
+            --primary-green-dark: {{ company.primary_color|default:'#073b24' }};
+            --primary-green-light: #f0f7f3;
+            --accent-green: #146c43;
+            --border-color: #bcdbc8;
+            --text-dark: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f6f8;
+        }
+
+        .page-container {
+            max-width: 850px;
+            min-height: 265mm;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .content-body {
+            flex-grow: 1;
+        }
+
+        .no-print {
+            max-width: 850px;
+            margin: 0 auto 15px auto;
+            text-align: right;
+        }
+
+        .btn-print {
+            padding: 10px 24px;
+            background-color: var(--primary-green);
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(13, 92, 58, 0.3);
+            transition: background-color 0.2s;
+        }
+
+        .btn-print:hover {
+            background-color: var(--primary-green-dark);
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px double var(--primary-green);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .company-logo {
+            max-width: 80px;
+            height: auto;
+        }
+
+        .company-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-green);
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .company-details {
+            font-size: 12px;
+            color: #4b5563;
+            line-height: 1.4;
+        }
+
+        .meta-table {
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .meta-table td {
+            padding: 3px 8px;
+            text-align: right;
+        }
+
+        .meta-table td.label {
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 3px 10px;
+            background-color: var(--primary-green-light);
+            color: var(--primary-green);
+            border: 1px solid var(--border-color);
+            font-weight: bold;
+            border-radius: 3px;
+        }
+
+        .bill-to-box {
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary-green);
+            background-color: var(--primary-green-light);
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border-radius: 2px;
+        }
+
+        .bill-to-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+        .receipt-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        .receipt-table th {
+            background-color: var(--primary-green);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 8px;
+            border: 1px solid var(--primary-green);
+        }
+
+        .receipt-table td {
+            font-size: 12px;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border-color);
+            border-left: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+            color: #1f2937;
+        }
+
+        .receipt-table tbody tr:nth-child(even) {
+            background-color: #fafdfb;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        .total-row td {
+            font-size: 13px;
+            font-weight: bold;
+            background-color: var(--primary-green-light) !important;
+            border-top: 2px solid var(--primary-green);
+            border-bottom: 2px double var(--primary-green);
+            color: var(--primary-green);
+        }
+
+        .summary-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 20px;
+            padding-top: 10px;
+        }
+
+        .thank-you-card {
+            font-style: italic;
+            color: #4b5563;
+            font-size: 12px;
+            max-width: 60%;
+            line-height: 1.5;
+        }
+
+        .grand-total-box {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--primary-green);
+            border-bottom: 2px solid var(--primary-green);
+            padding-bottom: 5px;
+        }
+
+        .footer-section {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .payment-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+        }
+
+        .bank-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .bank-card {
+            border: 1px solid var(--border-color);
+            background-color: var(--primary-green-light);
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .bank-name {
+            font-weight: bold;
+            color: var(--primary-green);
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        @media print {
+            @page {
+                margin: 0;
+            }
+
+            body {
+                padding: 15mm 20mm;
+                background-color: #ffffff;
+                margin: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .page-container {
+                box-shadow: none;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
+                min-height: 250mm;
+            }
+
+            .receipt-table th {
+                background-color: var(--primary-green) !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .bill-to-box, .bank-card, .badge-status, .total-row td {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Print Button -->
+    <div class="no-print">
+        <button onclick="window.print()" class="btn-print">Print Receipt</button>
+    </div>
+
+    <!-- Full-Page Receipt Container -->
+    <div class="page-container">
+
+        <div class="content-body">
+
+            <!-- Header Section -->
+            <div class="header-container">
+                <div class="brand-section">
+                    {% if company and company.logo %}
+                        <img src="{{ company.logo.url }}" alt="Pharmacy Logo" class="company-logo">
+                    {% else %}
+                        <img src="{% static 'img/logo.png' %}" alt="Pharmacy Logo" class="company-logo">
+                    {% endif %}
+                    <div>
+                        <div class="company-title">{{ pharmacy_info.name }}</div>
+                        <div class="company-details">
+                            {{ pharmacy_info.p_o_box }}{% if pharmacy_info.location %}<br>{{ pharmacy_info.location }}{% endif %}<br>
+                            Tel: {{ pharmacy_info.phone }} | Email: {{ pharmacy_info.email }}
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <table class="meta-table">
+                        <tr>
+                            <td class="label">Date:</td>
+                            <td>{{ sale_date }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Invoice No:</td>
+                            <td><strong>{{ invoice_number }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="label">TIN:</td>
+                            <td>{{ pharmacy_info.tin }}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Status:</td>
+                            <td><span class="badge-status">{{ sale_type_status }}</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Customer Details Section -->
+            <div class="bill-to-box">
+                <div class="bill-to-title">Bill To / Customer Information</div>
+                <strong>Customer Name:</strong> {{ customer_name }}
+                {% if customer_phone %} | <strong>Phone:</strong> {{ customer_phone }}{% endif %}
+                {% if customer_tin and customer_tin != 'N/A' %} | <strong>TIN:</strong> {{ customer_tin }}{% endif %}<br>
+                <strong>Served By:</strong> {{ saler_name }}
+            </div>
+
+            <!-- Receipt Table -->
+            <table class="receipt-table">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 5%;">S/NO</th>
+                        <th style="width: 32%;">NAME</th>
+                        <th class="text-center" style="width: 8%;">QUANTY</th>
+                        <th class="text-right" style="width: 14%;">PRICE (TZS)</th>
+                        <th class="text-center" style="width: 9%;">PACK</th>
+                        <th class="text-center" style="width: 10%;">BATCH</th>
+                        <th class="text-center" style="width: 8%;">EXP</th>
+                        <th class="text-right" style="width: 14%;">TOTAL (TZS)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="text-center">{{ item.s_no }}</td>
+                        <td><strong>{{ item.name }}</strong></td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-right">{{ item.price|floatformat:2|intcomma }}</td>
+                        <td class="text-center">{% if item.pack and item.pack != 'N/A' %}{{ item.pack }}{% else %}1{% endif %}</td>
+                        <td class="text-center">{% if item.batch and item.batch != 'N/A' %}{{ item.batch }}{% else %}N/A{% endif %}</td>
+                        <td class="text-center">{% if item.exp and item.exp != 'N/A' %}{{ item.exp }}{% else %}N/A{% endif %}</td>
+                        <td class="text-right">{{ item.total|floatformat:2|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td colspan="7" class="text-right">GRAND TOTAL:</td>
+                        <td class="text-right">{{ grand_total|floatformat:2|intcomma }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Summary Box -->
+            <div class="summary-wrapper">
+                <div class="thank-you-card">
+                    "{{ footer_message }}"
+                </div>
+                <div class="grand-total-box">
+                    Total IN - TZS: {{ grand_total|floatformat:2|intcomma }} TZS
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer Anchored to Bottom -->
+        <div class="footer-section">
+            <div class="payment-title">You Can Pay On Cash Or Bank Account</div>
+            <div class="bank-grid">
+                {% for bank in bank_accounts %}
+                <div class="bank-card">
+                    <div class="bank-name">{{ bank.bank_name }}</div>
+                    <div><strong>ACCOUNT NAME:</strong> {{ bank.account_name }}</div>
+                    <div><strong>ACCOUNT NO:</strong> {{ bank.account_number }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 11px; color: #6b7280;">
+                <strong>Commercial Terms:</strong><br>
+                1. All goods remain the property of {{ pharmacy_info.name }} until fully paid.<br>
+                2. No returns accepted after 7 days from the date of delivery.<br>
+                3. Shortage claims must be reported within 48 hours of receipt.<br>
+                4. Payment terms are strictly 30 days from invoice date unless otherwise agreed.
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

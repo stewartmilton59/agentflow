@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Update Sale {{ sale.invoice_number }} - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <form method="post" id="updateSaleForm">
+        {% csrf_token %}
+        <div class="row">
+            <!-- Left Column: Customer & General Info -->
+            <div class="col-md-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2 text-warning"></i>Sale Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Invoice Number</label>
+                            <input type="text" class="form-control fw-bold" value="{{ sale.invoice_number }}" readonly disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customer" class="form-label">Customer</label>
+                            <select name="customer" id="customer" class="form-select">
+                                <option value="">-- Walk-in / Custom Name --</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}" {% if sale.customer_id == customer.id %}selected{% endif %}>
+                                    {{ customer.get_full_name }} ({{ customer.phone_number|default:"No Phone" }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customer_name" class="form-label">Customer Name (Walk-in)</label>
+                            <input type="text" name="customer_name" id="customer_name" class="form-control" value="{{ sale.customer_name }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="3">{{ sale.notes }}</textarea>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <strong>Amount Paid:</strong> TZS {{ sale.amount_paid|floatformat:2 }}<br>
+                            <small>If you change the order total, you may need to manually adjust payments later.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Order Items -->
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-box-open me-2 text-primary"></i>Order Items</h5>
+
+                        <!-- Add Product Dropdown -->
+                        <div class="d-flex w-50">
+                            <select id="productSelect" class="form-select form-select-sm me-2">
+                                <option value="">-- Select Product to Add --</option>
+                                {% for product in all_products %}
+                                <option value="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.selling_price }}" data-stock="{{ product.current_stock }}">
+                                    {{ product.name }} (Stock: {{ product.current_stock }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-primary btn-sm" id="addProductBtn">Add</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="itemsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th width="15%">Qty</th>
+                                        <th width="20%">Unit Price</th>
+                                        <th width="20%">Subtotal</th>
+                                        <th width="10%">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in sale.items.all %}
+                                    <tr>
+                                        <td>
+                                            <input type="hidden" name="product_id[]" value="{{ item.product.id }}">
+                                            {{ item.product.name }}
+                                        </td>
+                                        <td>
+                                            <input type="number" name="quantity[]" class="form-control form-control-sm qty-input" value="{{ item.quantity }}" min="1" required>
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" name="price[]" class="form-control form-control-sm price-input" value="{{ item.unit_price|stringformat:'.2f' }}" required>
+                                        </td>
+                                        <td class="subtotal fw-bold text-end align-middle">
+                                            {{ item.subtotal|floatformat:2 }}
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <th colspan="3" class="text-end h5 mb-0">Grand Total:</th>
+                                        <th class="text-end h5 mb-0" id="grandTotal">TZS {{ sale.total_amount|floatformat:2 }}</th>
+                                        <th></th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white text-end py-3">
+                        <a href="{% url 'sales:sale_list' %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-1"></i> Update Entire Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tableBody = document.querySelector('#itemsTable tbody');
+    const grandTotalEl = document.getElementById('grandTotal');
+    const addProductBtn = document.getElementById('addProductBtn');
+    const productSelect = document.getElementById('productSelect');
+
+    // Function to calculate totals
+    function calculateTotals() {
+        let grandTotal = 0;
+        tableBody.querySelectorAll('tr').forEach(row => {
+            const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+            const price = parseFloat(row.querySelector('.price-input').value) || 0;
+            const subtotal = qty * price;
+
+            row.querySelector('.subtotal').textContent = subtotal.toFixed(2);
+            grandTotal += subtotal;
+        });
+        grandTotalEl.textContent = 'TZS ' + grandTotal.toFixed(2);
+    }
+
+    // Listen for input changes in the table
+    tableBody.addEventListener('input', function(e) {
+        if (e.target.classList.contains('qty-input') || e.target.classList.contains('price-input')) {
+            calculateTotals();
+        }
+    });
+
+    // Listen for row removal
+    tableBody.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-row')) {
+            e.target.closest('tr').remove();
+            calculateTotals();
+        }
+    });
+
+    // Add new product from dropdown
+    addProductBtn.addEventListener('click', function() {
+        const option = productSelect.options[productSelect.selectedIndex];
+        if (!option.value) return;
+
+        const productId = option.value;
+        const productName = option.getAttribute('data-name');
+        const price = parseFloat(option.getAttribute('data-price')).toFixed(2);
+
+        // Check if product is already in the table
+        const existingInput = tableBody.querySelector(`input[name="product_id[]"][value="${productId}"]`);
+        if (existingInput) {
+            alert('This product is already in the order. Please increase its quantity instead.');
+            return;
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <input type="hidden" name="product_id[]" value="${productId}">
+                ${productName} <span class="badge bg-success ms-1">New</span>
+            </td>
+            <td>
+                <input type="number" name="quantity[]" class="form-control form-control-sm qty-input" value="1" min="1" required>
+            </td>
+            <td>
+                <input type="number" step="0.01" name="price[]" class="form-control form-control-sm price-input" value="${price}" required>
+            </td>
+            <td class="subtotal fw-bold text-end align-middle">${price}</td>
+            <td class="text-center align-middle">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+
+        tableBody.appendChild(tr);
+        calculateTotals();
+        productSelect.value = ""; // Reset dropdown
+    });
+});
+</script>
+{% endblock %}

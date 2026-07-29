@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}PharmaFlow Receipt{% endblock %}</title>
+    <style>
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 4px 0;
+        }
+        
+        hr {
+            border: none;
+            border-top: 1px dashed #ddd;
+            margin: 10px 0;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-end {
+            text-align: right;
+        }
+        
+        .alert {
+            padding: 8px;
+            margin: 10px 0;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+    
+    <div class="no-print" style="text-align: center; margin-top: 20px;">
+        <button onclick="window.print()" class="btn btn-primary">Print Receipt</button>
+        <button onclick="window.close()" class="btn btn-secondary">Close</button>
+    </div>
+</body>
+</html>

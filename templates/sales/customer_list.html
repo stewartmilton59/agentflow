@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Customers - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-users text-primary me-2"></i>Customers
+            </h2>
+            <p class="text-muted">Manage customer information and loyalty</p>
+        </div>
+        <div>
+            <a href="{% url 'sales:customer_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i>Add Customer
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Name, phone, or email..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Customer Type</label>
+                <select name="type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for value, label in customer_types %}
+                    <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Customers Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Type</th>
+                            <th>Points</th>
+                            <th>Total Spent</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td><code>{{ customer.customer_code }}</code></td>
+                            <td>
+                                <strong>{{ customer.get_full_name }}</strong>
+                            </td>
+                            <td>{{ customer.phone_number }}</td>
+                            <td>{{ customer.email|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ customer.get_customer_type_display }}</span>
+                            </td>
+                            <td>{{ customer.loyalty_points|intcomma }}</td>
+                            <td>TZS {{ customer.total_spent|floatformat:0|intcomma }}</td>
+                            <td>
+                                <a href="{% url 'sales:customer_detail' customer.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">No customers found.</p>
+                                <a href="{% url 'sales:customer_create' %}" class="btn btn-primary mt-3">
+                                    <i class="fas fa-plus-circle me-2"></i>Add First Customer
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if customers.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if customers.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ customers.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in customers.paginator.page_range %}
+                        {% if customers.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > customers.number|add:'-3' and num < customers.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if customers.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ customers.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

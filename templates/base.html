@@ -1,0 +1,570 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AgentFlow - Pharmacy Management System{% endblock %}</title>
+
+    <!-- icon -->
+    {% if company and company.favicon %}
+        <link rel="icon" sizes="32x32" href="{{ company.favicon.url }}">
+        <link rel="icon" sizes="16x16" href="{{ company.favicon.url }}">
+    {% else %}
+        <link rel="icon" sizes="32x32" href="{% static 'favicon.png' %}">
+        <link rel="icon" sizes="16x16" href="{% static 'favicon.png' %}">
+    {% endif %}
+
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-green: #10b981;
+            --dark-green: #059669;
+            --light-green: #34d399;
+            --success-green: #10b981;
+            --danger-red: #ef4444;
+            --warning-orange: #f59e0b;
+            --info-blue: #3b82f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-green), var(--dark-green));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .sidebar {
+            background-color: white;
+            min-height: 100vh;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+
+        .sidebar .nav-link {
+            color: #374151;
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0;
+            border-radius: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .sidebar .nav-link:hover {
+            background-color: #f3f4f6;
+            color: var(--primary-green);
+        }
+
+        .sidebar .nav-link.active {
+            background-color: var(--primary-green);
+            color: white;
+        }
+
+        .sidebar .nav-link i {
+            width: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .sidebar .nav-link.has-dropdown {
+            cursor: pointer;
+        }
+
+        .sidebar .nav-dropdown {
+            list-style: none;
+            padding-left: 2.5rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .sidebar .nav-dropdown.show {
+            display: block;
+        }
+
+        .sidebar .nav-dropdown .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--dark-green);
+            border-color: var(--dark-green);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+
+        .card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background-color: #d1fae5;
+            border-color: #a7f3d0;
+            color: #065f46;
+        }
+
+        .text-primary {
+            color: var(--primary-green) !important;
+        }
+
+        .badge-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary-green), var(--dark-green));
+            color: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card i {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .avatar-sm {
+            width: 32px;
+            height: 32px;
+        }
+
+        .avatar-lg {
+            width: 100px;
+            height: 100px;
+        }
+
+        .product-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-inactive {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-low-stock {
+            background-color: #fed7aa;
+            color: #9b2c1d;
+        }
+
+        .status-out-stock {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .table-responsive {
+            border-radius: 0.75rem;
+        }
+
+        .filter-section {
+            background-color: white;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+
+        .pagination .page-link {
+            color: var(--primary-green);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        /* Stock indicator */
+        .stock-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .stock-high {
+            background-color: #10b981;
+        }
+
+        .stock-medium {
+            background-color: #f59e0b;
+        }
+
+        .stock-low {
+            background-color: #ef4444;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{% url 'core:dashboard' %}">
+                    <i class="fas fa-capsules me-2"></i>AgentFlow
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item me-3">
+                            <a class="nav-link position-relative" href="{% url 'core:notifications' %}">
+                                <i class="fas fa-bell"></i>
+                                {% if unread_notifications_count > 0 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ unread_notifications_count }}
+                                    </span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                {% if user.profile_image %}
+                                    <img src="{{ user.profile_image.url }}" class="avatar avatar-sm me-2">
+                                {% else %}
+                                    <i class="fas fa-user-circle me-2"></i>
+                                {% endif %}
+                                {{ user.get_full_name|default:user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                                    <i class="fas fa-user me-2"></i>Profile
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'accounts:change_password' %}">
+                                    <i class="fas fa-key me-2"></i>Change Password
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <nav class="col-md-2 d-md-block sidebar p-3">
+                    <div class="position-sticky">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                                   href="{% url 'core:dashboard' %}">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                </a>
+                            </li>
+                            <!--==================AI==================== -->
+                          <!--  <li class="nav-item">
+                                <a class="nav-link"
+                                   href="https://pharmaflow.pythonanywhere.com/chat">
+                                    <i class="fas fa-comment-dots"></i> AI_Chat
+                                </a>/
+                            </li>
+                          -->
+
+                            <!-- Inventory Dropdown -->
+                            <li class="nav-item">
+                                <a class="nav-link has-dropdown {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}"
+                                   onclick="toggleDropdown('inventoryDropdown')">
+                                    <i class="fas fa-boxes"></i> Inventory
+                                    <i class="fas fa-chevron-down float-end mt-1"></i>
+                                </a>
+                                <ul class="nav-dropdown" id="inventoryDropdown">
+                                    <li><a class="nav-link" href="{% url 'inventory:product_list' %}">
+                                        <i class="fas fa-capsules"></i> All Products
+                                    </a></li>
+                                    <li><a class="nav-link" href="{% url 'inventory:product_create' %}">
+                                        <i class="fas fa-plus-circle"></i> Add Product
+                                    </a></li>
+                                    <li><a class="nav-link" href="{% url 'inventory:stock_list' %}">
+                                        <i class="fas fa-chart-simple"></i> Stock Levels
+                                    </a></li>
+                                    <li><a class="nav-link" href="{% url 'inventory:stock_movement' %}">
+                                        <i class="fas fa-exchange-alt"></i> Stock Movements
+                                    </a></li>
+                                    <li><a class="nav-link" href="{% url 'inventory:stock_alerts' %}">
+                                        <i class="fas fa-bell"></i> Stock Alerts
+                                    </a></li>
+                                    <li><a class="nav-link" href="{% url 'inventory:stock_adjustment' %}">
+                                        <i class="fas fa-sliders-h"></i> Adjust Stock
+                                    </a></li>
+                                </ul>
+                            </li>
+
+                            <!-- Inventory Reports Dropdown -->
+                            <li class="nav-item">
+                                <a class="nav-link has-dropdown" onclick="toggleDropdown('reportsDropdown')">
+                                    <i class="fas fa-chart-line"></i> Reports
+                                    <i class="fas fa-chevron-down float-end mt-1"></i>
+                                </a>
+                                <ul class="nav-dropdown" id="reportsDropdown">
+                                    <li><a class="nav-link" href="{% url 'inventory:stock_list' %}">
+                                        <i class="fas fa-exclamation-triangle"></i> Stock Report
+                                    </a></li>
+                                    <li><a class="nav-link" href="{% url 'inventory:sales_report' %}">
+                                        <i class="fa-solid fa-file-invoice-dollar"></i> Sales Report
+                                    </a></li>
+                                </ul>
+                            </li>
+
+                            <!-- Purchases -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'purchases' %}active{% endif %}"
+                                   href="{% url 'purchases:purchase_order_list' %}">
+                                    <i class="fas fa-shopping-cart"></i> Purchases
+                                </a>
+                            </li>
+
+                            <!-- POS & Sales -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name == 'pos_view' %}active{% endif %}"
+                                   href="{% url 'sales:pos_view' %}">
+                                    <i class="fas fa-cash-register"></i> POS
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name == 'sale_list' %}active{% endif %}"
+                                   href="{% url 'sales:sale_list' %}">
+                                    <i class="fas fa-receipt"></i> Sales
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name == 'proforma_list' %}active{% endif %}"
+                                   href="{% url 'sales:proforma_list' %}">
+                                    <i class="fa-solid fa-file-invoice-dollar"></i> Proforma
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'sales' and 'customer' in request.path %}active{% endif %}"
+                                   href="{% url 'sales:customer_list' %}">
+                                    <i class="fas fa-users"></i> Customers
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'sales' and 'credit' in request.path %}active{% endif %}"
+                                   href="{% url 'sales:credit_list' %}">
+                                    <i class="fas fa-hand-holding-usd"></i> Credit/Rent
+                                </a>
+                            </li>
+
+                            <!-- Admin / Manager Section -->
+                            {% if user.is_administrator or user.is_superuser or user.role == 'manager' %}
+                            <li class="nav-item mt-3">
+                                <hr class="my-2">
+                                <small class="text-muted px-3">ADMINISTRATION</small>
+                            </li>
+                            {% if user.is_administrator or user.is_superuser or user.role == 'manager' %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}"
+                                   href="{% url 'accounts:user_list' %}">
+                                    <i class="fas fa-user-cog"></i> Users
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if user.is_administrator or user.is_superuser %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'core' and 'activity' in request.path %}active{% endif %}"
+                                   href="{% url 'core:activity_logs' %}">
+                                    <i class="fas fa-history"></i> Activity Log
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'core' and 'backup' in request.path %}active{% endif %}"
+                                   href="{% url 'core:backup' %}">
+                                    <i class="fas fa-database"></i> Backup
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.app_name == 'core' and 'company' in request.path %}active{% endif %}"
+                                   href="{% url 'core:company_settings' %}">
+                                    <i class="fas fa-building"></i> Company Settings
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% endif %}
+                        </ul>
+                    </div>
+                </nav>
+
+                <!-- Main content -->
+                <main class="col-md-10 ms-sm-auto px-md-4 py-4">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show fade-in" role="alert">
+                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% block content %}
+                    {% endblock %}
+                </main>
+            </div>
+        </div>
+    {% else %}
+        {% block auth_content %}
+        {% endblock %}
+    {% endif %}
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Toggle dropdown menu
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
+        }
+
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Initialize select2 for better dropdowns
+        $(document).ready(function() {
+            $('.select2').select2({
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
+
+            // DataTables initialization
+            if ($('.datatable').length) {
+                $('.datatable').DataTable({
+                    pageLength: 25,
+                    responsive: true,
+                    language: {
+                        search: "_INPUT_",
+                        searchPlaceholder: "Search..."
+                    }
+                });
+            }
+        });
+
+        // Stock level helper function
+        function getStockLevelClass(stock, reorderLevel) {
+            if (stock <= 0) return 'out-of-stock';
+            if (stock <= reorderLevel) return 'low-stock';
+            if (stock <= reorderLevel * 2) return 'medium-stock';
+            return 'high-stock';
+        }
+
+        function getStockLevelText(stock, reorderLevel) {
+            if (stock <= 0) return 'Out of Stock';
+            if (stock <= reorderLevel) return 'Low Stock';
+            if (stock <= reorderLevel * 2) return 'Medium Stock';
+            return 'Good Stock';
+        }
+
+        // Product barcode scanner integration
+        let barcodeBuffer = '';
+        let barcodeTimer;
+
+        document.addEventListener('keypress', function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+                clearTimeout(barcodeTimer);
+                barcodeBuffer += e.key;
+
+                barcodeTimer = setTimeout(function() {
+                    if (barcodeBuffer.length > 5) {
+                        window.location.href = '/inventory/api/barcode-lookup/?barcode=' + barcodeBuffer;
+                    }
+                    barcodeBuffer = '';
+                }, 50);
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

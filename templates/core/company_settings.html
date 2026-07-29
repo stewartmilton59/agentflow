@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+
+{% block title %}Company Settings - PharmaFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-building text-primary me-2"></i>Company Settings
+            </h2>
+            <p class="text-muted">Manage your company information and preferences</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Company Identity -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-id-card me-2"></i>Company Identity
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">Company Name *</label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger small">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.p_o_box.id_for_label }}" class="form-label">P.O.BOX</label>
+                                {{ form.p_o_box }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.legal_name.id_for_label }}" class="form-label">Legal Name</label>
+                                {{ form.legal_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.registration_no.id_for_label }}" class="form-label">Registration Number</label>
+                                {{ form.registration_no }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-phone me-2"></i>Contact Information
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.tax_id.id_for_label }}" class="form-label">TIN Number</label>
+                                {{ form.tax_id }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                                {{ form.email }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label">Phone Number</label>
+                                {{ form.phone }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.mobile.id_for_label }}" class="form-label">Mobile</label>
+                                {{ form.mobile }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.website.id_for_label }}" class="form-label">Website</label>
+                                {{ form.website }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-map-marker-alt me-2"></i>Location
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="{{ form.location.id_for_label }}" class="form-label">Location / Area</label>
+                                {{ form.location }}
+                                <small class="text-muted">e.g. Kariakoo, Dar es salaam, Tanzania</small>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="{{ form.address.id_for_label }}" class="form-label">Full Address</label>
+                                {{ form.address }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.city.id_for_label }}" class="form-label">City</label>
+                                {{ form.city }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.state.id_for_label }}" class="form-label">State/Region</label>
+                                {{ form.state }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.country.id_for_label }}" class="form-label">Country</label>
+                                {{ form.country }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Branding -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-palette me-2"></i>Branding
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.logo.id_for_label }}" class="form-label">Company Logo</label>
+                                {{ form.logo }}
+                                {% if company.logo %}
+                                    <div class="mt-2">
+                                        <img src="{{ company.logo.url }}" alt="Current Logo" style="max-height: 100px;">
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.favicon.id_for_label }}" class="form-label">Favicon</label>
+                                {{ form.favicon }}
+                                {% if company.favicon %}
+                                    <div class="mt-2">
+                                        <img src="{{ company.favicon.url }}" alt="Current Favicon" style="max-height: 40px;">
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.primary_color.id_for_label }}" class="form-label">Primary Color (System & Receipts)</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    {{ form.primary_color }}
+                                    <div id="colorPreview" style="width: 40px; height: 40px; border-radius: 8px; border: 2px solid #ddd;"></div>
+                                    <span id="colorHex" class="text-muted"></span>
+                                </div>
+                                <small class="text-muted">
+                                    This color is used across the system and all receipts (invoices, proforma, delivery notes).
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Color Changes Remaining</label>
+                                <div class="form-control-plaintext">
+                                    <span class="badge {% if company.color_changes_remaining > 0 %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                                        {{ company.color_changes_remaining }} / 5
+                                    </span>
+                                </div>
+                                {{ form.color_changes_remaining }}
+                                {% if company.color_changes_remaining <= 0 %}
+                                    <small class="text-danger">No more color changes allowed.</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Currency & Invoice -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-file-invoice me-2"></i>Invoice & Currency
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.currency.id_for_label }}" class="form-label">Currency</label>
+                                {{ form.currency }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.currency_symbol.id_for_label }}" class="form-label">Currency Symbol</label>
+                                {{ form.currency_symbol }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.invoice_prefix.id_for_label }}" class="form-label">Invoice Prefix</label>
+                                {{ form.invoice_prefix }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.invoice_footer_text.id_for_label }}" class="form-label">Invoice Footer Text</label>
+                                {{ form.invoice_footer_text }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Toggles -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-cog me-2"></i>Features
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    {{ form.enable_loyalty }}
+                                    <label class="form-check-label" for="{{ form.enable_loyalty.id_for_label }}">
+                                        Enable Loyalty Program
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    {{ form.enable_prescription }}
+                                    <label class="form-check-label" for="{{ form.enable_prescription.id_for_label }}">
+                                        Enable Prescription Tracking
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    {{ form.enable_email_notifications }}
+                                    <label class="form-check-label" for="{{ form.enable_email_notifications.id_for_label }}">
+                                        Enable Email Notifications
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div><i class="fas fa-university me-2"></i>Payment Methods (Bank Accounts)</div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPaymentMethod()">
+                            <i class="fas fa-plus me-1"></i>Add Account
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">Bank accounts displayed on invoices, proforma receipts, and delivery notes. Changes are saved immediately.</p>
+                        <div id="payment-methods-container">
+                            {% for pm in payment_methods %}
+                            <div class="row mb-3 payment-method-row align-items-end border rounded p-3 bg-light" data-pm-id="{{ pm.id }}">
+                                <input type="hidden" name="pm_id" value="{{ pm.id }}">
+                                <div class="col-md-3">
+                                    <label class="form-label">Bank Name</label>
+                                    <input type="text" name="bank_name" class="form-control" value="{{ pm.bank_name }}" placeholder="e.g. NMB Bank">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Account Name</label>
+                                    <input type="text" name="account_name" class="form-control" value="{{ pm.account_name }}" placeholder="Account holder name">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Account Number</label>
+                                    <input type="text" name="account_number" class="form-control" value="{{ pm.account_number }}" placeholder="Account number">
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-check form-switch mt-4">
+                                        <input type="checkbox" name="is_active" class="form-check-input pm-active-check" {% if pm.is_active %}checked{% endif %}>
+                                        <label class="form-check-label">Active</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-1 d-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-success pm-save-btn" onclick="savePaymentMethod(this)" title="Save">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deletePaymentMethod(this)" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div id="new-payment-methods"></div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const colorInput = document.getElementById('{{ form.primary_color.id_for_label }}');
+        const preview = document.getElementById('colorPreview');
+        const hexLabel = document.getElementById('colorHex');
+
+        if (colorInput && preview) {
+            function updatePreview() {
+                preview.style.backgroundColor = colorInput.value;
+                hexLabel.textContent = colorInput.value;
+            }
+            colorInput.addEventListener('input', updatePreview);
+            updatePreview();
+        }
+    });
+
+    const PM_AJAX_URL = "{% url 'core:payment_method_ajax' %}";
+    const CSRF_TOKEN = "{{ csrf_token }}";
+    let pmCounter = 0;
+
+    function getRowData(row) {
+        return {
+            pm_id: (row.querySelector('input[name="pm_id"]') || {}).value || '',
+            bank_name: (row.querySelector('input[name="bank_name"]') || {}).value || '',
+            account_name: (row.querySelector('input[name="account_name"]') || {}).value || '',
+            account_number: (row.querySelector('input[name="account_number"]') || {}).value || '',
+            is_active: row.querySelector('.pm-active-check').checked ? 'on' : '',
+        };
+    }
+
+    function showRowFeedback(row, success, message) {
+        let badge = row.querySelector('.pm-feedback');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'pm-feedback ms-2';
+            row.querySelector('.pm-save-btn').parentNode.appendChild(badge);
+        }
+        badge.className = 'pm-feedback ms-2 badge ' + (success ? 'bg-success' : 'bg-danger');
+        badge.textContent = message;
+        setTimeout(function() { badge.remove(); }, 3000);
+    }
+
+    function savePaymentMethod(btn) {
+        const row = btn.closest('.payment-method-row');
+        const data = getRowData(row);
+
+        if (!data.bank_name || !data.account_number) {
+            showRowFeedback(row, false, 'Fill required fields');
+            return;
+        }
+
+        btn.disabled = true;
+        const formData = new FormData();
+        formData.append('action', 'save');
+        formData.append('pm_id', data.pm_id);
+        formData.append('bank_name', data.bank_name);
+        formData.append('account_name', data.account_name);
+        formData.append('account_number', data.account_number);
+        formData.append('is_active', data.is_active);
+
+        fetch(PM_AJAX_URL, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF_TOKEN},
+            body: formData,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            btn.disabled = false;
+            if (resp.success) {
+                row.setAttribute('data-pm-id', resp.pm_id);
+                row.querySelector('input[name="pm_id"]').value = resp.pm_id;
+                row.classList.remove('border-warning');
+                row.classList.add('border-success');
+                showRowFeedback(row, true, 'Saved');
+                setTimeout(function() { row.classList.remove('border-success'); }, 2000);
+            } else {
+                showRowFeedback(row, false, resp.error || 'Error');
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            showRowFeedback(row, false, 'Network error');
+        });
+    }
+
+    function deletePaymentMethod(btn) {
+        const row = btn.closest('.payment-method-row');
+        const data = getRowData(row);
+        const isNew = !data.pm_id || data.pm_id.indexOf('new') === 0;
+
+        if (isNew) {
+            row.remove();
+            return;
+        }
+
+        if (!confirm('Delete this payment method?')) return;
+
+        btn.disabled = true;
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('pm_id', data.pm_id);
+
+        fetch(PM_AJAX_URL, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF_TOKEN},
+            body: formData,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.success) {
+                row.remove();
+            } else {
+                btn.disabled = false;
+                showRowFeedback(row, false, resp.error || 'Error');
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            showRowFeedback(row, false, 'Network error');
+        });
+    }
+
+    function addPaymentMethod() {
+        const id = 'new-' + pmCounter;
+        const container = document.getElementById('new-payment-methods');
+        const html = `
+            <div class="row mb-3 payment-method-row align-items-end border border-warning rounded p-3 bg-light" data-pm-id="">
+                <input type="hidden" name="pm_id" value="${id}">
+                <div class="col-md-3">
+                    <label class="form-label">Bank Name</label>
+                    <input type="text" name="bank_name" class="form-control" placeholder="e.g. NMB Bank">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Account Name</label>
+                    <input type="text" name="account_name" class="form-control" placeholder="Account holder name">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Account Number</label>
+                    <input type="text" name="account_number" class="form-control" placeholder="Account number">
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check form-switch mt-4">
+                        <input type="checkbox" name="is_active" class="form-check-input pm-active-check" checked>
+                        <label class="form-check-label">Active</label>
+                    </div>
+                </div>
+                <div class="col-md-1 d-flex gap-1">
+                    <button type="button" class="btn btn-sm btn-success pm-save-btn" onclick="savePaymentMethod(this)" title="Save">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deletePaymentMethod(this)" title="Remove">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+        pmCounter++;
+    }
+</script>
+{% endblock %}

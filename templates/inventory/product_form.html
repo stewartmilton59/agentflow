@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - PharmaFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #10b981;
+        display: inline-block;
+    }
+    .calculated-price {
+        background-color: #e8f5e9;
+        border: 1px solid #c8e6c9;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        text-align: center;
+    }
+    .calculated-price .price {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #10b981;
+    }
+    .help-text {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="mb-1"><i class="fas fa-pills me-2 text-primary"></i>{{ title }}</h4>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="{% url 'inventory:product_list' %}">Products</a></li>
+                            <li class="breadcrumb-item active">{{ title }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-capsules me-2"></i> Product Information
+                </div>
+                <div class="card-body">
+                    <form method="post" id="product-form">
+                        {% csrf_token %}
+
+                        <!-- Product Basic Information -->
+                        <div class="form-section">
+                            <h6 class="form-section-title">Product Information</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label required-field">Brand Name</label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="text-danger small">{{ form.name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.generic_name.id_for_label }}" class="form-label">Generic Name</label>
+                                    {{ form.generic_name }}
+                                    <div class="help-text">Active ingredient name (optional)</div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.batch_number.id_for_label }}" class="form-label">Batch Number</label>
+                                    {{ form.batch_number }}
+                                    {% if form.batch_number.errors %}
+                                        <div class="text-danger small">{{ form.batch_number.errors }}</div>
+                                    {% endif %}
+                                    <div class="help-text">Batch/Lot number for tracking</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.expiry_date.id_for_label }}" class="form-label">Expiry Date</label>
+                                    {{ form.expiry_date }}
+                                    {% if form.expiry_date.errors %}
+                                        <div class="text-danger small">{{ form.expiry_date.errors }}</div>
+                                    {% endif %}
+                                    <div class="help-text">Product expiration date</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.pack_size.id_for_label }}" class="form-label">Pack Size</label>
+                                    {{ form.pack_size }}
+                                    {% if form.pack_size.errors %}
+                                        <div class="text-danger small">{{ form.pack_size.errors }}</div>
+                                    {% endif %}
+                                    <div class="help-text">e.g. 10 tablets, 30 capsules, 250ml bottle</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pricing Information -->
+                        <div class="form-section">
+                            <h6 class="form-section-title">Pricing Information</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.purchase_price.id_for_label }}" class="form-label required-field">Buying Price</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">TZS</span>
+                                        {{ form.purchase_price }}
+                                    </div>
+                                    {% if form.purchase_price.errors %}
+                                        <div class="text-danger small">{{ form.purchase_price.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_markup_percentage" class="form-label">Markup (%)</label>
+                                    <div class="input-group">
+                                        <input type="number" name="markup_percentage" id="id_markup_percentage" class="form-control" step="0.01" value="30">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    <div class="help-text">Auto-calculates retail price</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.selling_price.id_for_label }}" class="form-label">Retail Price</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">TZS</span>
+                                        {{ form.selling_price }}
+                                    </div>
+                                    {% if form.selling_price.errors %}
+                                        <div class="text-danger small">{{ form.selling_price.errors }}</div>
+                                    {% endif %}
+                                    <div class="help-text">Auto-calculated from buying price × markup</div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_wholesale_markup" class="form-label">Wholesale Markup (%)</label>
+                                    <div class="input-group">
+                                        <input type="number" name="wholesale_markup" id="id_wholesale_markup" class="form-control" step="0.01" value="15" placeholder="0.00">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    <div class="help-text">Auto-calculates wholesale price</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.wholesale_price.id_for_label }}" class="form-label">Wholesale Price</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">TZS</span>
+                                        {{ form.wholesale_price }}
+                                    </div>
+                                    {% if form.wholesale_price.errors %}
+                                        <div class="text-danger small">{{ form.wholesale_price.errors }}</div>
+                                    {% endif %}
+                                    <div class="help-text">Price for bulk/wholesale customers (optional)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> Stock will be added when you create a purchase order.
+                            Initial stock is set to 0.
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Save Product
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        function calculatePrices() {
+            var purchasePrice = parseFloat($('#id_purchase_price').val()) || 0;
+
+            // Retail price from markup
+            var retailMarkup = parseFloat($('#id_markup_percentage').val()) || 0;
+            var retailPrice = purchasePrice * (1 + retailMarkup / 100);
+            retailPrice = Math.round(retailPrice * 100) / 100;
+            $('#id_selling_price').val(retailPrice.toFixed(2));
+
+            // Wholesale price from wholesale markup
+            var wholesaleMarkup = parseFloat($('#id_wholesale_markup').val()) || 0;
+            var wholesalePrice = purchasePrice * (1 + wholesaleMarkup / 100);
+            wholesalePrice = Math.round(wholesalePrice * 100) / 100;
+            $('#id_wholesale_price').val(wholesalePrice.toFixed(2));
+        }
+
+        $('#id_purchase_price, #id_markup_percentage, #id_wholesale_markup').on('input', function() {
+            calculatePrices();
+        });
+
+        if ($('#id_purchase_price').val()) {
+            calculatePrices();
+        }
+
+        // Form validation
+        $('#product-form').on('submit', function(e) {
+            var name = $('#id_name').val().trim();
+            var purchasePrice = parseFloat($('#id_purchase_price').val()) || 0;
+            var errors = [];
+
+            if (!name) {
+                errors.push('Brand name is required.');
+                $('#id_name').addClass('is-invalid');
+            } else {
+                $('#id_name').removeClass('is-invalid');
+            }
+
+            if (purchasePrice <= 0) {
+                errors.push('Buying price is required and must be greater than zero.');
+                $('#id_purchase_price').addClass('is-invalid');
+            } else {
+                $('#id_purchase_price').removeClass('is-invalid');
+            }
+
+            if (errors.length > 0) {
+                e.preventDefault();
+                alert(errors.join('\n'));
+                return false;
+            }
+
+            return true;
+        });
+
+        // Remove invalid class on input
+        $('#id_name, #id_purchase_price').on('input', function() {
+            $(this).removeClass('is-invalid');
+        });
+    });
+</script>
+{% endblock %}
