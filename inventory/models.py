@@ -138,6 +138,9 @@ class Product(models.Model):
             models.Index(fields=['sku']),
             models.Index(fields=['barcode']),
             models.Index(fields=['name']),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['category']),
+            models.Index(fields=['expiry_date']),
         ]
 
     def __str__(self):
@@ -205,6 +208,12 @@ class StockMovement(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['product']),
+            models.Index(fields=['movement_type']),
+            models.Index(fields=['reference_type', 'reference_id']),
+            models.Index(fields=['created_at']),
+        ]
 
     def __str__(self):
         return f"{self.product.name} - {self.movement_type} - {self.quantity}"
@@ -244,6 +253,11 @@ class StockAlert(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['alert_type']),
+            models.Index(fields=['product', 'alert_type', 'status']),
+        ]
 
     def __str__(self):
         return f"{self.product.name} - {self.get_alert_type_display()}"

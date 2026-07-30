@@ -1,16 +1,24 @@
+from django.core.cache import cache
+
 from .models import Company, Notification
 from accounts.permissions import has_permission, can_access_page
 
-def system_settings(request):
-    """Make system settings available to all templates"""
-    company = Company.objects.first()
-    unread_notifications_count = 0
 
+def system_settings(request):
+    company = cache.get('company_data')
+    if company is None:
+        company = Company.objects.only(
+            'id', 'name', 'favicon', 'logo', 'phone', 'email', 'address',
+            'location', 'p_o_box', 'tax_id'
+        ).first()
+        cache.set('company_data', company, 300)
+
+    unread_notifications_count = 0
     if request.user.is_authenticated:
         unread_notifications_count = Notification.objects.filter(
             user=request.user,
             is_read=False
-        ).count()
+        ).only('id').count()
 
     return {
         'company': company,
@@ -18,10 +26,7 @@ def system_settings(request):
     }
 
 
-# permissions
-
 def user_permissions(request):
-    """Make user permissions available in all templates"""
     if not request.user.is_authenticated:
         return {}
 

@@ -160,42 +160,9 @@
                         </table>
                     </div>
 
-                    <!-- Pagination -->
-                    {% if proformas.has_other_pages %}
-                    <nav aria-label="Page navigation" class="mt-4">
-                        <ul class="pagination justify-content-center">
-                            {% if proformas.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ proformas.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
-                                    <i class="fas fa-chevron-left"></i> Previous
-                                </a>
-                            </li>
-                            {% endif %}
-
-                            {% for num in proformas.paginator.page_range %}
-                                {% if proformas.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link bg-warning text-dark border-warning">{{ num }}</span>
-                                </li>
-                                {% elif num > proformas.number|add:'-3' and num < proformas.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
-                                        {{ num }}
-                                    </a>
-                                </li>
-                                {% endif %}
-                            {% endfor %}
-
-                            {% if proformas.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ proformas.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
-                                    Next <i class="fas fa-chevron-right"></i>
-                                </a>
-                            </li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                    {% endif %}
+                    {% with page_obj=proformas %}
+                    {% include '_pagination.html' %}
+                    {% endwith %}
                 </div>
             </div>
         </div>

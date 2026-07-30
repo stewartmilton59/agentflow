@@ -60,6 +60,8 @@ class Customer(models.Model):
             models.Index(fields=['customer_code']),
             models.Index(fields=['phone_number']),
             models.Index(fields=['email']),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['first_name', 'last_name']),
         ]
 
     def __str__(self):
@@ -159,6 +161,9 @@ class Sale(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['sale_date']),
             models.Index(fields=['has_credit']),
+            models.Index(fields=['created_by']),
+            models.Index(fields=['customer']),
+            models.Index(fields=['payment_status']),
         ]
 
     def __str__(self):
@@ -467,6 +472,7 @@ class SaleItem(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['sale', 'product']),
+            models.Index(fields=['product']),
         ]
 
     def __str__(self):
@@ -535,6 +541,13 @@ class Payment(models.Model):
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['sale']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['payment_method']),
+        ]
 
     def __str__(self):
         return f"Payment {self.payment_number} - TSh {self.amount}"

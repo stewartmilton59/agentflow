@@ -153,36 +153,11 @@
                 </table>
             </div>
 
-            <!-- Pagination -->
-            {% if sales_items.has_other_pages %}
+            {% with page_obj=sales_items %}
             <div class="p-3">
-                <nav>
-                    <ul class="pagination justify-content-center mb-0">
-                        {% if sales_items.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ sales_items.previous_page_number }}&search={{ search }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}">Previous</a>
-                        </li>
-                        {% endif %}
-
-                        {% for num in sales_items.paginator.page_range %}
-                            {% if sales_items.number == num %}
-                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                            {% elif num > sales_items.number|add:'-3' and num < sales_items.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}&search={{ search }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}">{{ num }}</a>
-                            </li>
-                            {% endif %}
-                        {% endfor %}
-
-                        {% if sales_items.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ sales_items.next_page_number }}&search={{ search }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}">Next</a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
+                {% include '_pagination.html' %}
             </div>
-            {% endif %}
+            {% endwith %}
         </div>
     </div>
 </div>

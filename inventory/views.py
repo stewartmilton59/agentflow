@@ -32,7 +32,12 @@ from core.models import ActivityLog, Company, PaymentMethod
 @login_required
 def product_list_view(request):
     """List all products"""
-    products = Product.objects.filter(is_active=True)
+    products = Product.objects.filter(is_active=True).select_related('category').only(
+        'id', 'name', 'sku', 'generic_name', 'product_type', 'purchase_price',
+        'selling_price', 'current_stock', 'reorder_level', 'category',
+        'expiry_date', 'batch_number', 'pack_size', 'is_active', 'image',
+        'prescription_required'
+    )
 
     search = request.GET.get('search', '')
     if search:
@@ -132,7 +137,11 @@ def product_detail_view(request, pk):
     product = get_object_or_404(Product, id=pk)
 
     # Get recent stock movements for this product
-    movements = StockMovement.objects.filter(product=product).order_by('-created_at')[:10]
+    movements = StockMovement.objects.filter(product=product).select_related('created_by').only(
+        'id', 'movement_type', 'quantity', 'previous_quantity', 'new_quantity',
+        'unit_price', 'total_amount', 'reference_type', 'reference_id', 'notes',
+        'created_by', 'created_at'
+    ).order_by('-created_at')[:10]
 
     context = {
         'product': product,
@@ -212,7 +221,11 @@ def product_delete_view(request, pk):
 @login_required
 def stock_list_view(request):
     """Display current stock levels for all products"""
-    products = Product.objects.filter(is_active=True)
+    products = Product.objects.filter(is_active=True).select_related('category').only(
+        'id', 'name', 'sku', 'current_stock', 'reorder_level', 'selling_price',
+        'purchase_price', 'category', 'expiry_date', 'batch_number', 'pack_size',
+        'is_active', 'image'
+    )
 
     search = request.GET.get('search', '')
     if search:
@@ -353,23 +366,29 @@ def stock_movement_print_view(request):
         if company else []
     )
 
-    total_movements = movements.count()
-    total_quantity = movements.aggregate(total=Sum('quantity'))['total'] or 0
-    type_totals_amount = movements.aggregate(total=Sum('total_amount'))['total'] or 0
+    totals = movements.aggregate(
+        total_movements=Count('id'),
+        total_quantity=Sum('quantity'),
+        type_totals_amount=Sum('total_amount'),
+    )
+    total_movements = totals['total_movements'] or 0
+    total_quantity = totals['total_quantity'] or 0
+    type_totals_amount = totals['type_totals_amount'] or 0
 
     type_breakdown = []
-    for type_code, type_label in StockMovement.MOVEMENT_TYPES:
-        type_qs = movements.filter(movement_type=type_code)
-        count = type_qs.count()
-        if count > 0:
-            qty = type_qs.aggregate(total=Sum('quantity'))['total'] or 0
-            amt = type_qs.aggregate(total=Sum('total_amount'))['total'] or 0
-            type_breakdown.append({
-                'type': type_label,
-                'count': count,
-                'total_qty': qty,
-                'total_amt': amt,
-            })
+    type_aggs = movements.values('movement_type').annotate(
+        count=Count('id'),
+        qty=Sum('quantity'),
+        amt=Sum('total_amount'),
+    )
+    type_map = dict(StockMovement.MOVEMENT_TYPES)
+    for row in type_aggs:
+        type_breakdown.append({
+            'type': type_map.get(row['movement_type'], row['movement_type']),
+            'count': row['count'],
+            'total_qty': row['qty'] or 0,
+            'total_amt': row['amt'] or 0,
+        })
 
     context = {
         'movements': movements,
@@ -406,55 +425,77 @@ def stock_alerts_view(request):
             messages.success(request, 'Alert resolved.')
             return redirect('inventory:stock_alerts')
 
-    for product in Product.objects.all():
-        if product.current_stock <= product.reorder_level and product.current_stock > 0:
-            StockAlert.objects.get_or_create(
-                product=product,
-                alert_type='low_stock',
-                status='active',
-                defaults={
-                    'message': f'{product.name} stock is low: {product.current_stock}',
-                    'current_value': product.current_stock,
-                    'threshold_value': product.reorder_level
-                }
-            )
-        else:
-            StockAlert.objects.filter(
-                product=product,
-                alert_type='low_stock',
-                status='active'
-            ).update(status='resolved', resolved_at=timezone.now(), resolved_by=request.user)
+    now = timezone.now()
+    today = now.date()
+    Product.objects.filter(
+        current_stock__lte=F('reorder_level'), current_stock__gt=0, is_active=True
+    ).exclude(
+        stock_alerts__alert_type='low_stock', stock_alerts__status='active'
+    ).values_list('id', flat=True)
 
-        if product.expiry_date:
-            days_until = (product.expiry_date - timezone.now().date()).days
-            if 0 < days_until <= 90:
-                StockAlert.objects.get_or_create(
-                    product=product,
-                    alert_type='expiring_soon',
-                    status='active',
-                    defaults={
-                        'message': f'{product.name} batch {product.batch_number or "N/A"} will expire in {days_until} days',
-                        'current_value': days_until,
-                        'threshold_value': 90,
-                    }
-                )
-            elif days_until < 0:
-                StockAlert.objects.get_or_create(
-                    product=product,
-                    alert_type='expired',
-                    status='active',
-                    defaults={
-                        'message': f'{product.name} batch {product.batch_number or "N/A"} has expired',
-                        'current_value': abs(days_until),
-                        'threshold_value': 0,
-                    }
-                )
-            else:
-                StockAlert.objects.filter(
-                    product=product,
-                    alert_type__in=['expiring_soon', 'expired'],
-                    status='active'
-                ).update(status='resolved', resolved_at=timezone.now(), resolved_by=request.user)
+    low_stock_products = Product.objects.filter(
+        current_stock__lte=F('reorder_level'), current_stock__gt=0, is_active=True
+    ).only('id', 'name', 'current_stock', 'reorder_level')
+
+    for product in low_stock_products:
+        StockAlert.objects.get_or_create(
+            product=product,
+            alert_type='low_stock',
+            status='active',
+            defaults={
+                'message': f'{product.name} stock is low: {product.current_stock}',
+                'current_value': product.current_stock,
+                'threshold_value': product.reorder_level
+            }
+        )
+
+    StockAlert.objects.filter(
+        alert_type='low_stock', status='active'
+    ).exclude(
+        product__in=low_stock_products.values('id')
+    ).update(status='resolved', resolved_at=now, resolved_by=request.user)
+
+    expiring_products = Product.objects.filter(
+        expiry_date__gte=today, expiry_date__lte=today + timedelta(days=90),
+        is_active=True
+    ).only('id', 'name', 'batch_number', 'expiry_date')
+
+    for product in expiring_products:
+        days_until = (product.expiry_date - today).days
+        StockAlert.objects.get_or_create(
+            product=product,
+            alert_type='expiring_soon',
+            status='active',
+            defaults={
+                'message': f'{product.name} batch {product.batch_number or "N/A"} will expire in {days_until} days',
+                'current_value': days_until,
+                'threshold_value': 90,
+            }
+        )
+
+    expired_products = Product.objects.filter(
+        expiry_date__lt=today, is_active=True
+    ).only('id', 'name', 'batch_number', 'expiry_date')
+
+    for product in expired_products:
+        days_until = (product.expiry_date - today).days
+        StockAlert.objects.get_or_create(
+            product=product,
+            alert_type='expired',
+            status='active',
+            defaults={
+                'message': f'{product.name} batch {product.batch_number or "N/A"} has expired',
+                'current_value': abs(days_until),
+                'threshold_value': 0,
+            }
+        )
+
+    active_ids = list(expiring_products.values_list('id', flat=True)) + list(expired_products.values_list('id', flat=True))
+    StockAlert.objects.filter(
+        alert_type__in=['expiring_soon', 'expired'], status='active'
+    ).exclude(
+        product__in=active_ids
+    ).update(status='resolved', resolved_at=now, resolved_by=request.user)
 
     alerts = StockAlert.objects.select_related('product').filter(status='active')
 
@@ -829,8 +870,12 @@ def sales_report_view(request):
 
     # Aggregate summaries across all matching filtered records
     total_records = sales_items_qs.count()
-    total_quantity = sum(item.quantity for item in sales_items_qs)
-    total_amount_paid = sum(_get_item_amount_paid(item) for item in sales_items_qs)
+    totals = sales_items_qs.aggregate(
+        total_quantity=Sum('quantity'),
+        total_amount=Sum(F('unit_price') * F('quantity'))
+    )
+    total_quantity = totals['total_quantity'] or 0
+    total_amount_paid = float(totals['total_amount'] or 0)
 
     paginator = Paginator(sales_items_qs, 20)
     page_number = request.GET.get('page')

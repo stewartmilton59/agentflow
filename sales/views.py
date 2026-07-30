@@ -38,7 +38,15 @@ logger = logging.getLogger(__name__)
 MIN_PRICE_RATIO = Decimal('0.70')
 
 def get_company():
-    return Company.objects.first()
+    from django.core.cache import cache
+    company = cache.get('company_data')
+    if company is None:
+        company = Company.objects.only(
+            'id', 'name', 'favicon', 'logo', 'phone', 'email', 'address',
+            'location', 'p_o_box', 'tax_id'
+        ).first()
+        cache.set('company_data', company, 300)
+    return company
 
 
 def get_product_from_payload(product_id):
@@ -61,8 +69,13 @@ def pos_view(request):
 @login_required
 def pos_table_view(request):
     cart = Cart(request.user.id)
-    products = Product.objects.filter(is_active=True).select_related('category').order_by('name')
-    customers = Customer.objects.filter(is_active=True)
+    products = Product.objects.filter(is_active=True).select_related('category').only(
+        'id', 'name', 'selling_price', 'wholesale_price', 'current_stock',
+        'prescription_required', 'category', 'image', 'sku', 'reorder_level'
+    ).order_by('name')
+    customers = Customer.objects.filter(is_active=True).only(
+        'id', 'first_name', 'last_name', 'phone_number'
+    )
 
     context = {
         'cart': cart,
@@ -404,7 +417,8 @@ def proforma_receipt_view(request, pk):
 
 @login_required
 def convert_proforma_to_sale_view(request, pk):
-    proforma = get_object_or_404(Sale, id=pk, status='proforma')
+    proforma = get_object_or_404(Sale.objects.select_related('customer', 'created_by'), id=pk, status='proforma')
+    proforma_items = proforma.items.select_related('product').all()
 
     if request.method == 'POST':
         form = ConvertProformaForm(request.POST)
@@ -461,6 +475,7 @@ def convert_proforma_to_sale_view(request, pk):
 
     context = {
         'proforma': proforma,
+        'items': proforma_items,
         'form': form,
         'stock_status': stock_status,
         'has_insufficient_stock': has_insufficient_stock
@@ -659,11 +674,18 @@ def checkout_view(request):
                 created_by=request.user,
             )
 
+            cart_product_ids = [item.product_id for item in cart.items]
+            products_map = {}
+            for p in Product.objects.filter(id__in=cart_product_ids, is_active=True).only(
+                'id', 'name', 'current_stock', 'selling_price', 'batch_number',
+                'expiry_date', 'pack_size', 'prescription_required'
+            ):
+                products_map[str(p.id)] = p
+
             invalid_items = []
             for item in cart.items:
-                try:
-                    product = Product.objects.get(id=item.product_id, is_active=True)
-                except Product.DoesNotExist:
+                product = products_map.get(item.product_id)
+                if product is None:
                     invalid_items.append(item.product_name)
                     continue
 
@@ -683,11 +705,11 @@ def checkout_view(request):
                 )
                 sale_item.save()
 
-                if product.prescription_required != 'none':
+                if hasattr(product, 'prescription_required') and product.prescription_required != 'none':
                     sale_item.prescription_required = True
-                    sale_item.save()
+                    sale_item.save(update_fields=['prescription_required'])
                     sale.prescription_required = True
-                    sale.save()
+                    sale.save(update_fields=['prescription_required'])
 
             if invalid_items:
                 sale.delete()
@@ -850,18 +872,15 @@ def sale_list_view(request):
         count=Count('id')
     )
 
-    today_credit_payments = Payment.objects.filter(
+    credit_payments = Payment.objects.filter(
         created_at__gte=today_start,
         created_at__lt=today_end,
         notes__startswith='Credit repayment'
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    ).aggregate(total=Sum('amount'), count=Count('id'))
 
+    today_credit_payments = credit_payments['total'] or Decimal('0')
     today_sales_total = (today_sales['total'] or Decimal('0')) + today_credit_payments
-    today_sales_count = (today_sales['count'] or 0) + Payment.objects.filter(
-        created_at__gte=today_start,
-        created_at__lt=today_end,
-        notes__startswith='Credit repayment'
-    ).count()
+    today_sales_count = (today_sales['count'] or 0) + (credit_payments['count'] or 0)
 
     context = {
         'sales': page_obj,
@@ -876,7 +895,7 @@ def sale_list_view(request):
 
 @login_required
 def sale_detail_view(request, pk):
-    sale = get_object_or_404(Sale, id=pk)
+    sale = get_object_or_404(Sale.objects.select_related('customer', 'created_by'), id=pk)
     items = sale.items.select_related('product').all()
     payments = sale.payments.all()
     credit_records = sale.credit_records.all()
@@ -1050,7 +1069,7 @@ def delivery_note_view(request, pk):
 def sale_update_view(request, pk):
     from django.db import transaction
 
-    sale = get_object_or_404(Sale, id=pk)
+    sale = get_object_or_404(Sale.objects.select_related('customer', 'created_by'), id=pk)
 
     if not (request.user.is_superuser or sale.status in ['pending', 'proforma']):
         messages.error(request, 'Only superusers or pending/proforma sales can be updated.')
@@ -1135,8 +1154,12 @@ def sale_update_view(request, pk):
             messages.error(request, f"Error updating sale: {str(e)}")
             return redirect('sales:sale_update', pk=sale.id)
 
-    customers = Customer.objects.filter(is_active=True)
-    all_products = Product.objects.filter(is_active=True).order_by('name')
+    customers = Customer.objects.filter(is_active=True).only(
+        'id', 'first_name', 'last_name', 'phone_number'
+    )
+    all_products = Product.objects.filter(is_active=True).select_related('category').only(
+        'id', 'name', 'sku', 'selling_price', 'current_stock', 'category'
+    ).order_by('name')
 
     context = {
         'sale': sale,
@@ -1194,13 +1217,13 @@ def sale_delete_view(request, pk):
 
 @login_required
 def sale_payments_view(request, pk):
-    sale = get_object_or_404(Sale, id=pk)
+    sale = get_object_or_404(Sale.objects.select_related('customer', 'created_by'), id=pk)
 
     if request.user.role == 'cashier' and sale.created_by != request.user:
         messages.error(request, 'You can only manage payments for your own sales.')
         return redirect('sales:sale_list')
 
-    payments = sale.payments.all().order_by('-created_at')
+    payments = sale.payments.select_related('created_by').all().order_by('-created_at')
     remaining_balance = sale.get_remaining_balance()
 
     context = {
@@ -1245,7 +1268,11 @@ def add_partial_payment(request, pk):
 
 @login_required
 def customer_list_view(request):
-    customers = Customer.objects.all()
+    customers = Customer.objects.only(
+        'id', 'first_name', 'last_name', 'phone_number', 'email',
+        'customer_type', 'is_active', 'total_spent', 'credit_limit',
+        'current_balance', 'loyalty_points'
+    )
 
     search = request.GET.get('search')
     if search:
@@ -1296,7 +1323,7 @@ def customer_detail_view(request, pk):
     customer = get_object_or_404(Customer, id=pk)
     sales = customer.sales.exclude(status='proforma')[:10]
     loyalty_card = getattr(customer, 'loyalty_card', None)
-    credit_records = customer.credit_records.filter(status__in=['pending', 'partial'])
+    credit_records = customer.credit_records.select_related('sale').filter(status__in=['pending', 'partial'])
 
     context = {
         'customer': customer,
@@ -1329,23 +1356,27 @@ def credit_list_view(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    total_outstanding = CreditRecord.objects.filter(
+    credit_aggs = CreditRecord.objects.filter(
         status__in=['pending', 'partial', 'overdue']
-    ).aggregate(total=Sum('remaining_balance'))['total'] or 0
+    ).aggregate(
+        total_outstanding=Sum('remaining_balance'),
+        pending_count=Count('id', filter=Q(status='pending')),
+        overdue_count=Count('id', filter=Q(status='overdue')),
+    )
 
     context = {
         'credits': page_obj,
-        'total_outstanding': total_outstanding,
-        'pending_count': CreditRecord.objects.filter(status='pending').count(),
-        'overdue_count': CreditRecord.objects.filter(status='overdue').count(),
+        'total_outstanding': credit_aggs['total_outstanding'] or 0,
+        'pending_count': credit_aggs['pending_count'] or 0,
+        'overdue_count': credit_aggs['overdue_count'] or 0,
         'status_filter': status,
     }
     return render(request, 'sales/credit_list.html', context)
 
 @login_required
 def credit_detail_view(request, pk):
-    credit = get_object_or_404(CreditRecord, id=pk)
-    related_payments = credit.sale.payments.all().order_by('created_at')
+    credit = get_object_or_404(CreditRecord.objects.select_related('sale', 'customer', 'created_by'), id=pk)
+    related_payments = credit.sale.payments.select_related('created_by').all().order_by('created_at')
 
     context = {
         'credit': credit,
@@ -1355,7 +1386,7 @@ def credit_detail_view(request, pk):
 
 @login_required
 def credit_payment_view(request, pk):
-    credit = get_object_or_404(CreditRecord, id=pk)
+    credit = get_object_or_404(CreditRecord.objects.select_related('sale', 'customer', 'created_by'), id=pk)
 
     if credit.status == 'paid':
         messages.warning(request, 'This credit has already been fully paid.')
@@ -1407,7 +1438,9 @@ def api_products(request):
     category = request.GET.get('category')
     search = request.GET.get('search')
 
-    products = Product.objects.filter(is_active=True, current_stock__gt=0)
+    products = Product.objects.filter(is_active=True, current_stock__gt=0).select_related('category').only(
+        'id', 'name', 'sku', 'selling_price', 'current_stock', 'reorder_level', 'category', 'image'
+    )
 
     if category:
         products = products.filter(category_id=category)
@@ -1458,7 +1491,7 @@ def api_product_stock(request, product_id):
 
 @login_required
 def edit_payment_view(request, pk):
-    payment = get_object_or_404(Payment, id=pk)
+    payment = get_object_or_404(Payment.objects.select_related('sale', 'sale__customer', 'created_by'), id=pk)
     sale = payment.sale
 
     if request.user.role == 'cashier' and sale.created_by != request.user:
@@ -1511,7 +1544,7 @@ def edit_payment_view(request, pk):
 
 @login_required
 def delete_payment_view(request, pk):
-    payment = get_object_or_404(Payment, id=pk)
+    payment = get_object_or_404(Payment.objects.select_related('sale', 'sale__customer', 'created_by'), id=pk)
     sale = payment.sale
 
     if request.user.role == 'cashier' and sale.created_by != request.user:
