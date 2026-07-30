@@ -9,6 +9,3 @@ django-jazzmin
 xhtml2pdf
 openpyxl
 whitenoise
-dj-urls-panel
-dj-signals-panel
-dj-control-room

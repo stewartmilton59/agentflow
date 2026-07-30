@@ -64,10 +64,6 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'django.contrib.humanize',
-    'dj_urls_panel',
-    'dj_signals_panel',
-    "dj_control_room_base",
-    "dj_control_room",
 
     'accounts',
     'core',
