@@ -107,6 +107,69 @@ def create_database_backup(backup_name, backup_type):
         return None, 0
 
 
+def restore_database_backup(file_path):
+    """
+    Restore a database from a backup SQL dump.
+
+    Args:
+        file_path: Path to the backup .sql file
+
+    Returns:
+        (success, message) tuple
+    """
+    try:
+        if not os.path.exists(file_path):
+            return False, f"Backup file not found: {file_path}"
+
+        db_config = settings.DATABASES['default']
+
+        if db_config['ENGINE'] == 'django.db.backends.sqlite3':
+            db_path = db_config['NAME']
+            import sqlite3
+            with open(file_path, 'r') as f:
+                sql_content = f.read()
+            conn = sqlite3.connect(db_path)
+            conn.executescript(sql_content)
+            conn.close()
+
+        elif db_config['ENGINE'] == 'django.db.backends.mysql':
+            cmd = [
+                'mysql',
+                f"--user={db_config.get('USER', 'root')}",
+                f"--password={db_config.get('PASSWORD', '')}",
+                f"--host={db_config.get('HOST', 'localhost')}",
+                f"--port={db_config.get('PORT', 3306)}",
+                db_config['NAME']
+            ]
+            with open(file_path, 'r') as f:
+                result = subprocess.run(cmd, stdin=f, capture_output=True, text=True)
+            if result.returncode != 0:
+                return False, f"MySQL restore failed: {result.stderr}"
+
+        elif db_config['ENGINE'] == 'django.db.backends.postgresql':
+            env = os.environ.copy()
+            if db_config.get('PASSWORD'):
+                env['PGPASSWORD'] = db_config['PASSWORD']
+            cmd = [
+                'psql',
+                f"--username={db_config.get('USER', 'postgres')}",
+                f"--host={db_config.get('HOST', 'localhost')}",
+                f"--port={db_config.get('PORT', 5432)}",
+                f"--dbname={db_config['NAME']}"
+            ]
+            with open(file_path, 'r') as f:
+                result = subprocess.run(cmd, stdin=f, capture_output=True, text=True, env=env)
+            if result.returncode != 0:
+                return False, f"PostgreSQL restore failed: {result.stderr}"
+
+        else:
+            return False, f"Unsupported database backend: {db_config['ENGINE']}"
+
+        return True, "Database restored successfully."
+    except Exception as e:
+        return False, f"Error restoring database: {str(e)}"
+
+
 def create_media_backup(backup_name):
     """
     Create a media files backup (tar.gz)

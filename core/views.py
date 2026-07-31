@@ -13,7 +13,7 @@ import json
 import os
 
 from .models import Company, PaymentMethod, ActivityLog, Notification, Backup, SystemSetting
-from .backup_utils import create_database_backup, create_media_backup, create_full_backup
+from .backup_utils import create_database_backup, create_media_backup, create_full_backup, restore_database_backup
 from .forms import CompanyForm, SystemSettingForm, BackupForm
 from accounts.models import UserActivityLog
 from sales.models import Sale, Payment, SaleItem, Customer, CreditRecord
@@ -557,6 +557,30 @@ def delete_backup(request, backup_id):
         os.remove(backup.file_path)
     backup.delete()
     messages.success(request, 'Backup deleted successfully!')
+    return redirect('core:backup')
+
+
+@login_required
+@user_passes_test(lambda u: u.is_administrator or u.is_superuser)
+@require_http_methods(["POST"])
+def restore_backup(request, backup_id):
+    backup = get_object_or_404(Backup, id=backup_id)
+
+    if not backup.file_path or not os.path.exists(backup.file_path):
+        messages.error(request, 'Backup file not found. Cannot restore.')
+        return redirect('core:backup')
+
+    if not backup.file_path.endswith('.sql'):
+        messages.error(request, 'Only database (.sql) backups can be restored through the interface. Media/full backups must be restored manually.')
+        return redirect('core:backup')
+
+    success, message = restore_database_backup(backup.file_path)
+
+    if success:
+        messages.success(request, f'Backup "{backup.name}" restored successfully.')
+    else:
+        messages.error(request, f'Restore failed: {message}')
+
     return redirect('core:backup')
 
 

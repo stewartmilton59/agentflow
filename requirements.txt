@@ -9,3 +9,4 @@ django-jazzmin
 xhtml2pdf
 openpyxl
 whitenoise
+mysqlclient

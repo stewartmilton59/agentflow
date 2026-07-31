@@ -108,8 +108,15 @@ WSGI_APPLICATION = 'agentflow.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'database' / 'data.sqlite3',
+        'ENGINE': get_env_var('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': get_env_var('DB_NAME', BASE_DIR / 'database' / 'data.sqlite3'),
+        'USER': get_env_var('DB_USER', ''),
+        'PASSWORD': get_env_var('DB_PASSWORD', ''),
+        'HOST': get_env_var('DB_HOST', ''),
+        'PORT': get_env_var('DB_PORT', ''),
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        } if get_env_var('DB_ENGINE', '').endswith('mysql') else {},
     }
 }
 

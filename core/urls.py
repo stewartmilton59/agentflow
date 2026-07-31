@@ -17,4 +17,5 @@ urlpatterns = [
     path('activity-logs/export/', views.export_activity_logs, name='export_activity_logs'),
     path('backup/', views.backup_view, name='backup'),
     path('backup/delete/<uuid:backup_id>/', views.delete_backup, name='delete_backup'),
+    path('backup/restore/<uuid:backup_id>/', views.restore_backup, name='restore_backup'),
 ]

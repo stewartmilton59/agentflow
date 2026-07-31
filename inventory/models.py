@@ -103,7 +103,7 @@ class Product(models.Model):
     # Stock Information
     current_stock = models.IntegerField(default=0)
     minimum_stock = models.IntegerField(default=5)
-    maximum_stock = models.IntegerField(default=5000000000)
+    maximum_stock = models.IntegerField(default=999999999)
     unit = models.CharField(max_length=20, default='piece', help_text="Unit of measurement (e.g., tablet, bottle, box)")
 
     # Regulatory
