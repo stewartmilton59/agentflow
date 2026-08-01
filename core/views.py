@@ -25,99 +25,81 @@ from core.decorators import administrator_required
 @administrator_required
 def dashboard_view(request):
     """Main dashboard with comprehensive statistics"""
-    today = timezone.now().date()
-    week_ago = today - timedelta(days=7)
-    month_ago = today - timedelta(days=30)
-    year_ago = today - timedelta(days=365)
-    yesterday = today - timedelta(days=1)
-
     current_time = timezone.now()
+
+    # ========== SALES STATISTICS ==========
+
+    def _period_sales(start, end):
+        """Completed sales in a date range (based on sale_date)."""
+        return Sale.objects.filter(
+            sale_date__gte=start,
+            sale_date__lt=end,
+            status='completed'
+        ).aggregate(
+            total=Sum('total_amount'),
+            count=Count('id')
+        )
+
+    def _credit_payments(start, end):
+        """Credit repayments received in a date range."""
+        return Payment.objects.filter(
+            created_at__gte=start,
+            created_at__lt=end,
+            notes__startswith='Credit repayment'
+        ).aggregate(
+            total=Sum('amount'),
+            count=Count('id')
+        )
+
+    # Today's sales should include completed sales created today and any credit repayments settled today.
     today_start = timezone.localtime(current_time).replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
     yesterday_start = today_start - timedelta(days=1)
     yesterday_end = today_start
 
-    # ========== SALES STATISTICS ==========
-
-    # Today's sales should include completed sales created today and any credit repayments settled today.
-    today_sales = Sale.objects.filter(
-        sale_date__gte=today_start,
-        sale_date__lt=today_end,
-        status='completed'
-    ).aggregate(
-        total=Sum('total_amount'),
-        count=Count('id')
-    )
-    today_sales['total'] = today_sales['total'] or Decimal('0')
-    today_sales['count'] = today_sales['count'] or 0
-
-    today_credit_payments = Payment.objects.filter(
-        created_at__gte=today_start,
-        created_at__lt=today_end,
-        notes__startswith='Credit repayment'
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-    today_sales['total'] += today_credit_payments
-
-    today_credit_count = Payment.objects.filter(
-        created_at__gte=today_start,
-        created_at__lt=today_end,
-        notes__startswith='Credit repayment'
-    ).count()
-    today_sales['count'] += today_credit_count
+    today_sales = _period_sales(today_start, today_end)
+    today_credit = _credit_payments(today_start, today_end)
+    today_sales['total'] = (today_sales['total'] or Decimal('0')) + (today_credit['total'] or Decimal('0'))
+    today_sales['count'] += today_credit['count']
+    today_sales['credit_total'] = today_credit['total'] or Decimal('0')
+    today_sales['credit_count'] = today_credit['count']
 
     # Yesterday's sales for comparison, using the same logic as today.
-    yesterday_sales = Sale.objects.filter(
-        sale_date__gte=yesterday_start,
-        sale_date__lt=yesterday_end,
-        status='completed'
-    ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+    yesterday_sales = _period_sales(yesterday_start, yesterday_end)
+    yesterday_credit = _credit_payments(yesterday_start, yesterday_end)
+    yesterday_sales['total'] = (yesterday_sales['total'] or Decimal('0')) + (yesterday_credit['total'] or Decimal('0'))
+    yesterday_sales['credit_total'] = yesterday_credit['total'] or Decimal('0')
 
-    yesterday_credit_payments = Payment.objects.filter(
-        created_at__gte=yesterday_start,
-        created_at__lt=yesterday_end,
-        notes__startswith='Credit repayment'
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-    yesterday_sales += yesterday_credit_payments
+    # Weekly sales (same field logic as today, plus credit repayments)
+    week_start = today_start - timedelta(days=6)
+    weekly_sales = _period_sales(week_start, today_end)
+    weekly_credit = _credit_payments(week_start, today_end)
+    weekly_sales['total'] = (weekly_sales['total'] or Decimal('0')) + (weekly_credit['total'] or Decimal('0'))
+    weekly_sales['count'] += weekly_credit['count']
+    weekly_sales['credit_total'] = weekly_credit['total'] or Decimal('0')
+
+    # Monthly sales
+    month_start = today_start.replace(day=1)
+    monthly_sales = _period_sales(month_start, today_end)
+    monthly_credit = _credit_payments(month_start, today_end)
+    monthly_sales['total'] = (monthly_sales['total'] or Decimal('0')) + (monthly_credit['total'] or Decimal('0'))
+    monthly_sales['count'] += monthly_credit['count']
+    monthly_sales['credit_total'] = monthly_credit['total'] or Decimal('0')
+
+    # Yearly sales
+    year_start = today_start.replace(month=1, day=1)
+    yearly_sales = _period_sales(year_start, today_end)
+    yearly_credit = _credit_payments(year_start, today_end)
+    yearly_sales['total'] = (yearly_sales['total'] or Decimal('0')) + (yearly_credit['total'] or Decimal('0'))
+    yearly_sales['count'] += yearly_credit['count']
+    yearly_sales['credit_total'] = yearly_credit['total'] or Decimal('0')
 
     # Calculate percentage change
-    if yesterday_sales > 0:
-        vs_yesterday = ((today_sales['total'] - yesterday_sales) / yesterday_sales) * 100
+    if yesterday_sales['total'] > 0:
+        vs_yesterday = ((today_sales['total'] - yesterday_sales['total']) / yesterday_sales['total']) * 100
         today_sales['vs_yesterday'] = round(float(vs_yesterday), 1)
     else:
         today_sales['vs_yesterday'] = 100 if today_sales['total'] > 0 else 0
-
-    # Weekly sales
-    weekly_sales = Sale.objects.filter(
-        created_at__date__gte=week_ago,
-        status='completed'
-    ).aggregate(
-        total=Sum('total_amount'),
-        count=Count('id')
-    )
-    weekly_sales['total'] = weekly_sales['total'] or Decimal('0')
-    weekly_sales['count'] = weekly_sales['count'] or 0
-
-    # Monthly sales
-    monthly_sales = Sale.objects.filter(
-        created_at__date__gte=month_ago,
-        status='completed'
-    ).aggregate(
-        total=Sum('total_amount'),
-        count=Count('id')
-    )
-    monthly_sales['total'] = monthly_sales['total'] or Decimal('0')
-    monthly_sales['count'] = monthly_sales['count'] or 0
-
-    # Yearly sales
-    yearly_sales = Sale.objects.filter(
-        created_at__date__gte=year_ago,
-        status='completed'
-    ).aggregate(
-        total=Sum('total_amount'),
-        count=Count('id')
-    )
-    yearly_sales['total'] = yearly_sales['total'] or Decimal('0')
-    yearly_sales['count'] = yearly_sales['count'] or 0
 
     # ========== INVENTORY STATISTICS ==========
     # Simplified - directly from Product model (no batches)
@@ -159,12 +141,15 @@ def dashboard_view(request):
 
     # ========== CHARTS DATA ==========
 
+    today = today_start.date()
+    month_ago = today - timedelta(days=30)
+
     # Last 7 days sales data
     sales_data = []
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
         day_sales = Sale.objects.filter(
-            created_at__date=day,
+            sale_date__date=day,
             status='completed'
         ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
         sales_data.append({
@@ -183,8 +168,8 @@ def dashboard_view(request):
             month_end = month.replace(month=month.month+1, day=1) - timedelta(days=1)
 
         month_sales_total = Sale.objects.filter(
-            created_at__date__gte=month_start,
-            created_at__date__lte=month_end,
+            sale_date__date__gte=month_start,
+            sale_date__date__lte=month_end,
             status='completed'
         ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
 
@@ -210,7 +195,7 @@ def dashboard_view(request):
 
     top_products = SaleItem.objects.filter(
         sale__status='completed',
-        sale__created_at__date__gte=month_ago
+        sale__sale_date__date__gte=month_ago
     ).values(
         'product__id',
         'product__name',
@@ -257,19 +242,23 @@ def dashboard_view(request):
         'today_sales': {
             'total': float(today_sales['total']),
             'count': today_sales['count'],
-            'vs_yesterday': today_sales['vs_yesterday']
+            'vs_yesterday': today_sales['vs_yesterday'],
+            'credit_total': float(today_sales['credit_total'])
         },
         'weekly_sales': {
             'total': float(weekly_sales['total']),
-            'count': weekly_sales['count']
+            'count': weekly_sales['count'],
+            'credit_total': float(weekly_sales['credit_total'])
         },
         'monthly_sales': {
             'total': float(monthly_sales['total']),
-            'count': monthly_sales['count']
+            'count': monthly_sales['count'],
+            'credit_total': float(monthly_sales['credit_total'])
         },
         'yearly_sales': {
             'total': float(yearly_sales['total']),
-            'count': yearly_sales['count']
+            'count': yearly_sales['count'],
+            'credit_total': float(yearly_sales['credit_total'])
         },
         'total_stock_value': float(total_stock_value),
         'total_selling_value': float(total_selling_value),

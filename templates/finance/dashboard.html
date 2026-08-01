@@ -1,0 +1,669 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Financial Data - AgentFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- ========== HEADER ========== -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="welcome-card d-flex flex-wrap justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-2"><i class="fas fa-chart-pie text-primary me-2"></i>Financial Data</h2>
+                    <p class="text-muted mb-0">Profit &amp; Loss, expenses, credits and estimated profitability.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'finance:expense_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-money-bill-wave me-1"></i> Expenses
+                    </a>
+                    <a href="{% url 'finance:expense_category_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-folder-open me-1"></i> Categories
+                    </a>
+                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#quickExpenseModal">
+                        <i class="fas fa-plus-circle me-1"></i> Record Expense
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== PERIOD FILTER ========== -->
+    <div class="filter-section mb-4">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">From Date</label>
+                <input type="date" name="from_date" value="{{ start|date:'Y-m-d' }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">To Date</label>
+                <input type="date" name="to_date" value="{{ end|date:'Y-m-d' }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Apply Period
+                </button>
+            </div>
+            <div class="col-md-3 text-md-end">
+                <span class="badge bg-dark">{{ period_label }}</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- ========== ESTIMATED TOTAL PROFIT BANNER (dismissible) ========== -->
+    <div class="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert"
+         style="border-left: 5px solid #059669; background: linear-gradient(135deg, #ecfdf5, #d1fae5);">
+        <div class="d-flex align-items-center flex-wrap">
+            <i class="fas fa-money-check-dollar fa-2x me-3 text-success"></i>
+            <div class="fs-6">
+                <strong>Estimated Total Profit =</strong>
+                Gross Profit (<span class="fw-semibold">{{ gross_profit|floatformat:0|intcomma }}</span>)
+                + Stock Profit Potential (<span class="fw-semibold">{{ stock_est_profit|floatformat:0|intcomma }}</span>)
+                - Expenses (<span class="fw-semibold">{{ expenses|floatformat:0|intcomma }}</span>)
+                = <strong class="fs-5 text-success">TZS {{ estimated_total_profit|floatformat:0|intcomma }}</strong>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- ========== PROFIT & LOSS KPI CARDS ========== -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-start border-success border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Revenue ({{ sales_count }} sales)</h6>
+                            <h3 class="text-success mb-0">TZS {{ revenue|floatformat:0|intcomma }}</h3>
+                        </div>
+                        <i class="fas fa-arrow-trend-up fa-2x text-success opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-start border-info border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Cost of Goods Sold</h6>
+                            <h3 class="text-info mb-0">TZS {{ cogs|floatformat:0|intcomma }}</h3>
+                        </div>
+                        <i class="fas fa-boxes-stacked fa-2x text-info opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-start border-warning border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Expenses ({{ expense_count }})</h6>
+                            <h3 class="text-warning mb-0">TZS {{ expenses|floatformat:0|intcomma }}</h3>
+                        </div>
+                        <i class="fas fa-money-bill-wave fa-2x text-warning opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-start border-danger border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-1">Purchases (spent)</h6>
+                            <h3 class="text-danger mb-0">TZS {{ purchases|floatformat:0|intcomma }}</h3>
+                        </div>
+                        <i class="fas fa-truck fa-2x text-danger opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== PROFIT SUMMARY ========== -->
+    <div class="row mb-4">
+        <div class="col-lg-4">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-2">Gross Profit</h6>
+                        <h3 class="mb-1">TZS {{ gross_profit|floatformat:0|intcomma }}</h3>
+                        <small>Margin: {{ gross_margin|floatformat:1 }}%</small>
+                    </div>
+                    <i class="fas fa-coins"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="stat-card h-100" style="background: linear-gradient(135deg, #2563eb, #1e40af);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-2">Net Profit (after expenses)</h6>
+                        <h3 class="mb-1 {% if net_profit < 0 %}text-danger{% endif %}">TZS {{ net_profit|floatformat:0|intcomma }}</h3>
+                        <small>Margin: {{ net_margin|floatformat:1 }}%</small>
+                    </div>
+                    <i class="fas fa-scale-balanced"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="stat-card h-100" style="background: linear-gradient(135deg, #059669, #065f46);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-2">Estimated Total Profit</h6>
+                        <h3 class="mb-1">TZS {{ estimated_total_profit|floatformat:0|intcomma }}</h3>
+                        <small>Realized + stock potential</small>
+                    </div>
+                    <i class="fas fa-money-check-dollar"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== REAL PROFIT BY PERIOD ========== -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="section-title"><i class="fas fa-scale-balanced me-2"></i>Real Profit by Period</h5>
+        </div>
+    </div>
+    <div class="row mb-4">
+        {% for p in profit_periods %}
+        <div class="col-md-6 col-xl-3 mb-3 mb-xl-0">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <strong><i class="fas fa-calendar-day me-1"></i>{{ p.label }}</strong>
+                    <small class="text-muted">{{ p.sub }}</small>
+                </div>
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">Revenue</small>
+                        <span>TZS {{ p.report.revenue|floatformat:0|intcomma }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">Gross Profit</small>
+                        <span>TZS {{ p.report.gross_profit|floatformat:0|intcomma }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">Expenses</small>
+                        <span>TZS {{ p.report.expenses|floatformat:0|intcomma }}</span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="text-muted">Real Profit</strong>
+                        <h5 class="mb-0 {% if p.report.net_profit < 0 %}text-danger{% else %}text-success{% endif %}">
+                            TZS {{ p.report.net_profit|floatformat:0|intcomma }}
+                        </h5>
+                    </div>
+                    <small class="text-muted d-block text-end">Margin: {{ p.report.margin|floatformat:1 }}%</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ========== CREDIT SUMMARY ========== -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1"><i class="fas fa-hand-holding-dollar me-1 text-primary"></i>Credit Given (period)</h6>
+                    <h4>TZS {{ credit_given|floatformat:0|intcomma }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1"><i class="fas fa-hand-holding-dollar me-1 text-success"></i>Credit Collected (period)</h6>
+                    <h4 class="text-success">TZS {{ credit_collected|floatformat:0|intcomma }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1"><i class="fas fa-hourglass-half me-1 text-danger"></i>Credit Outstanding (owed to you)</h6>
+                    <h4 class="text-danger">TZS {{ credit_outstanding|floatformat:0|intcomma }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== CHARTS ========== -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-chart-column me-2"></i>Revenue vs Expenses (Last 6 Months)</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-chart-pie me-2"></i>Expenses by Category</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="expenseCategoryChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-chart-line me-2"></i>Daily Revenue (Last 7 Days)</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="dailySalesChart" style="max-height: 280px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-wallet me-2"></i>Payment Methods</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="paymentChart" style="max-height: 280px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== STOCK ESTIMATE ========== -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-boxes-stacked me-2"></i>Stock &amp; Estimated Profit</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <h6 class="text-muted">Stock Value (cost)</h6>
+                            <h4>TZS {{ stock_value|floatformat:0|intcomma }}</h4>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <h6 class="text-muted">Stock Value (selling price)</h6>
+                            <h4>TZS {{ stock_sale_value|floatformat:0|intcomma }}</h4>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-muted">Estimated Stock Profit ({{ stock_profit_margin|floatformat:1 }}%)</h6>
+                            <h4 class="text-success">+ TZS {{ stock_est_profit|floatformat:0|intcomma }}</h4>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        See the banner above for the full <strong>Estimated Total Profit</strong> breakdown
+                        (Gross Profit + Stock Profit Potential - Expenses).
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TABLES ========== -->
+    <div class="row mb-4">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <h3 class="card-title"><i class="fas fa-ranking-star me-2"></i>Top Selling Products</h3>
+                    <a href="{% url 'inventory:sales_report' %}" class="btn btn-sm btn-outline-primary">Full Report</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Revenue</th>
+                                    <th class="text-end">Cost</th>
+                                    <th class="text-end">Profit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in top_products %}
+                                <tr>
+                                    <td>
+                                        {{ p.name }}
+                                        {% if p.generic_name %}<br><small class="text-muted">{{ p.generic_name }}</small>{% endif %}
+                                    </td>
+                                    <td class="text-center">{{ p.qty }}</td>
+                                    <td class="text-end">TZS {{ p.revenue|floatformat:0|intcomma }}</td>
+                                    <td class="text-end">TZS {{ p.cost|floatformat:0|intcomma }}</td>
+                                    <td class="text-end text-success">TZS {{ p.profit|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted py-4">No sales in this period.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <h3 class="card-title"><i class="fas fa-user-clock me-2"></i>Top Credit Balances</h3>
+                    <a href="{% url 'sales:credit_list' %}" class="btn btn-sm btn-outline-primary">Manage</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in customer_credits %}
+                                <tr>
+                                    <td>{{ c.get_customer_display|default:"Walk-in" }}</td>
+                                    <td>
+                                        <span class="badge {% if c.status == 'overdue' %}bg-danger{% elif c.status == 'pending' %}bg-warning{% else %}bg-info{% endif %}">{{ c.get_status_display }}</span>
+                                    </td>
+                                    <td class="text-end">TZS {{ c.remaining_balance|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted py-4">No outstanding credit.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== RECENT ACTIVITY TABLES ========== -->
+    <div class="row mb-4">
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <h3 class="card-title"><i class="fas fa-money-bill-wave me-2 text-warning"></i>Recent Expenses</h3>
+                    <a href="{% url 'finance:expense_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for e in recent_expenses %}
+                                <tr>
+                                    <td>
+                                        {% if e.category %}
+                                            <span class="badge" style="background-color: {{ e.category.color }};">{{ e.category.name }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Uncategorized</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ e.description|truncatechars:25 }}</td>
+                                    <td class="text-end">TZS {{ e.amount|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted py-4">No expenses recorded yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <h3 class="card-title"><i class="fas fa-truck me-2 text-danger"></i>Recent Purchases</h3>
+                    <a href="{% url 'purchases:purchase_order_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>PO #</th>
+                                    <th>Supplier</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in recent_purchases %}
+                                <tr>
+                                    <td>{{ p.po_number }}</td>
+                                    <td>{{ p.supplier_name|default:"-"|truncatechars:20 }}</td>
+                                    <td class="text-end">TZS {{ p.total_amount|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted py-4">No purchases recorded yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <h3 class="card-title"><i class="fas fa-receipt me-2 text-success"></i>Recent Sales</h3>
+                    <a href="{% url 'sales:sale_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Invoice</th>
+                                    <th>Customer</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in recent_sales %}
+                                <tr>
+                                    <td>{{ s.invoice_number }}</td>
+                                    <td>{{ s.customer_name|default:"Walk-in"|truncatechars:20 }}</td>
+                                    <td class="text-end">TZS {{ s.total_amount|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted py-4">No sales recorded yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== FREQUENT EXPENSES ========== -->
+    {% if frequent_categories %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-star me-2 text-warning"></i>Frequent Expenses</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for cat in frequent_categories %}
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="d-flex align-items-center p-3 rounded border" style="border-left: 4px solid {{ cat.color }};">
+                                <i class="fas {{ cat.icon|default:'fa-circle' }} fa-lg me-2" style="color: {{ cat.color }};"></i>
+                                <div>
+                                    <a href="{% url 'finance:expense_category_expenses' cat.id %}" class="fw-bold text-decoration-none">{{ cat.name }}</a>
+                                    <br><small class="text-muted">{{ cat.expenses.count }} expense{{ cat.expenses.count|pluralize }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ========== QUICK EXPENSE MODAL ========== -->
+    <div class="modal fade" id="quickExpenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'finance:expense_create' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'finance:dashboard' %}">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-plus-circle me-2 text-primary"></i>Record Expense</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Category <small class="text-muted">(frequent expenses only)</small></label>
+                            <select name="category" class="form-select">
+                                <option value="">No category (one-off expense)</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}">{% if cat.is_frequent %}★ {% endif %}{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Leave empty for one-off expenses. Use categories for frequent ones like electricity bills.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount (TZS)</label>
+                            <input type="number" name="amount" class="form-control" step="0.01" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <input type="text" name="description" class="form-control" placeholder="e.g. Monthly electricity bill">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date</label>
+                                <input type="date" name="expense_date" class="form-control" value="{% now "Y-m-d" %}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Payment Method</label>
+                                <select name="payment_method" class="form-select">
+                                    <option value="cash">Cash</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="mobile_money">Mobile Money</option>
+                                    <option value="card">Card</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Paid To</label>
+                            <input type="text" name="paid_to" class="form-control" placeholder="e.g. TANESCO">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Save Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const fmt = v => 'TZS ' + Number(v).toLocaleString();
+
+    // Monthly revenue vs expenses
+    const monthlyData = {{ monthly_series|safe }};
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels: monthlyData.map(m => m.label),
+            datasets: [
+                { label: 'Revenue', data: monthlyData.map(m => m.revenue), backgroundColor: '#10b981', borderRadius: 6 },
+                { label: 'Expenses', data: monthlyData.map(m => m.expenses), backgroundColor: '#f59e0b', borderRadius: 6 },
+                { label: 'Net Profit', data: monthlyData.map(m => m.profit), backgroundColor: '#3b82f6', borderRadius: 6 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: { tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.parsed.y) } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => fmt(v) } } }
+        }
+    });
+
+    // Expense categories pie
+    const expenseCatData = {{ expenses_by_category|safe }};
+    const palette = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#84cc16'];
+    new Chart(document.getElementById('expenseCategoryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: expenseCatData.map(c => c.name + (c.is_frequent ? ' ★' : '')),
+            datasets: [{ data: expenseCatData.map(c => c.total),
+                backgroundColor: expenseCatData.map((c, i) => c.color || palette[i % palette.length]),
+                borderWidth: 0 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: ctx => `${ctx.label}: ${fmt(ctx.parsed)}` } }
+            }
+        }
+    });
+
+    // Daily sales line
+    const dailyData = {{ daily_sales|safe }};
+    new Chart(document.getElementById('dailySalesChart'), {
+        type: 'line',
+        data: {
+            labels: dailyData.map(d => d.label),
+            datasets: [{ label: 'Revenue', data: dailyData.map(d => d.revenue),
+                borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.4, fill: true,
+                pointBackgroundColor: '#3b82f6' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: { tooltip: { callbacks: { label: ctx => fmt(ctx.parsed.y) } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => fmt(v) } } }
+        }
+    });
+
+    // Payment methods pie
+    const paymentData = {{ payment_methods|safe }};
+    new Chart(document.getElementById('paymentChart'), {
+        type: 'pie',
+        data: {
+            labels: paymentData.map(p => p.method),
+            datasets: [{ data: paymentData.map(p => p.total), backgroundColor: palette, borderWidth: 0 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: ctx => {
+                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                    return `${ctx.label}: ${fmt(ctx.parsed)} (${pct}%)`;
+                }}}
+            }
+        }
+    });
+</script>
+{% endblock %}

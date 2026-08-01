@@ -63,6 +63,9 @@
                     <h6>Today's Sales</h6>
                     <h3>TZS {{ today_sales.total|floatformat:0|intcomma }}</h3>
                     <small>{{ today_sales.count }} transactions</small>
+                    {% if today_sales.credit_total %}
+                        <br><small class="text-info fw-semibold">Credit paid: TZS {{ today_sales.credit_total|floatformat:0|intcomma }}</small>
+                    {% endif %}
                     {% if today_sales.vs_yesterday %}
                         <small class="{% if today_sales.vs_yesterday > 0 %}text-success{% else %}text-danger{% endif %}">
                             {{ today_sales.vs_yesterday|floatformat:1 }}% vs yesterday
@@ -78,6 +81,9 @@
                     <h6>This Week</h6>
                     <h3>TZS {{ weekly_sales.total|floatformat:0|intcomma }}</h3>
                     <small>{{ weekly_sales.count }} transactions</small>
+                    {% if weekly_sales.credit_total %}
+                        <br><small class="text-info fw-semibold">Credit paid: TZS {{ weekly_sales.credit_total|floatformat:0|intcomma }}</small>
+                    {% endif %}
                     <small class="text-muted">Last 7 days</small>
                 </div>
             </div>
@@ -89,6 +95,9 @@
                     <h6>This Month</h6>
                     <h3>TZS {{ monthly_sales.total|floatformat:0|intcomma }}</h3>
                     <small>{{ monthly_sales.count }} transactions</small>
+                    {% if monthly_sales.credit_total %}
+                        <br><small class="text-info fw-semibold">Credit paid: TZS {{ monthly_sales.credit_total|floatformat:0|intcomma }}</small>
+                    {% endif %}
                     <small class="text-muted">Last 30 days</small>
                 </div>
             </div>
@@ -100,6 +109,9 @@
                     <h6>This Year</h6>
                     <h3>TZS {{ yearly_sales.total|floatformat:0|intcomma }}</h3>
                     <small>{{ yearly_sales.count }} transactions</small>
+                    {% if yearly_sales.credit_total %}
+                        <br><small class="text-info fw-semibold">Credit paid: TZS {{ yearly_sales.credit_total|floatformat:0|intcomma }}</small>
+                    {% endif %}
                     <small class="text-muted">Year to date</small>
                 </div>
             </div>

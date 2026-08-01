@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'inventory',
     'purchases',
     'sales',
+    'finance',
 ]
 
 MIDDLEWARE = [
@@ -221,6 +222,7 @@ JAZZMIN_SETTINGS = {
         "inventory",
         "purchases",
         "sales",
+        "finance",
     ],
     "icons": {
         "auth": "fas fa-shield-alt",
@@ -252,6 +254,8 @@ JAZZMIN_SETTINGS = {
         "sales.LoyaltyTransaction": "fas fa-history",
         "purchases.PurchaseOrder": "fas fa-truck",
         "purchases.PurchaseOrderItem": "fas fa-box",
+        "finance.Expense": "fas fa-money-bill-wave",
+        "finance.ExpenseCategory": "fas fa-folder-open",
     },
     "default_icon_parents": "fas fa-folder",
     "default_icon_children": "fas fa-circle",

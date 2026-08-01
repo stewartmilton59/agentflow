@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if category %}Edit{% else %}Add{% endif %} Expense Category - AgentFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-{% if category %}edit{% else %}plus-circle{% endif %} me-2 text-primary"></i>
+                        {% if category %}Edit{% else %}Add{% endif %} Expense Category
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Category Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ form.name.value|default:'' }}" placeholder="e.g. Electricity Bills" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="2">{{ form.description.value|default:'' }}</textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Icon</label>
+                                <input type="text" name="icon" class="form-control" value="{{ form.icon.value|default:'' }}" placeholder="fas fa-bolt">
+                                <small class="text-muted">FontAwesome icon class (e.g. fas fa-bolt for electricity)</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Color</label>
+                                <input type="color" name="color" class="form-control form-control-color" value="{{ form.color.value|default:'#0d5c3a' }}">
+                            </div>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="is_frequent" id="id_frequent"
+                                   {% if form.is_frequent.value %}checked{% endif %}>
+                            <label class="form-check-label" for="id_frequent">★ Frequent / recurring expense (e.g. electricity, rent)</label>
+                        </div>
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" name="is_active" id="id_active"
+                                   {% if form.is_active.value %}checked{% endif %}>
+                            <label class="form-check-label" for="id_active">Active</label>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> {% if category %}Update{% else %}Create{% endif %} Category
+                            </button>
+                            <a href="{% url 'finance:expense_category_list' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

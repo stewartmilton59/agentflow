@@ -373,6 +373,28 @@
                                 </ul>
                             </li>
 
+                            <!-- Financial Data Dropdown -->
+                            {% if user.is_administrator or user.is_superuser or user.role == 'manager' or user.role == 'auditor' %}
+                            <li class="nav-item">
+                                <a class="nav-link has-dropdown {% if request.resolver_match.app_name == 'finance' %}active{% endif %}"
+                                   onclick="toggleDropdown('financeDropdown')">
+                                    <i class="fas fa-chart-pie"></i> Financials
+                                    <i class="fas fa-chevron-down float-end mt-1"></i>
+                                </a>
+                                <ul class="nav-dropdown" id="financeDropdown">
+                                    <li><a class="nav-link" href="{% url 'finance:dashboard' %}">
+                                        <i class="fas fa-scale-balanced"></i> Profit &amp; Loss
+                                    </a></li>
+                                    <li><a class="nav-link" href="{% url 'finance:expense_list' %}">
+                                        <i class="fas fa-money-bill-wave"></i> Expenses
+                                    </a></li>
+                                    <li><a class="nav-link" href="{% url 'finance:expense_category_list' %}">
+                                        <i class="fas fa-folder-open"></i> Expense Categories
+                                    </a></li>
+                                </ul>
+                            </li>
+                            {% endif %}
+
                             <!-- Purchases -->
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.app_name == 'purchases' %}active{% endif %}"
@@ -493,15 +515,6 @@
                 dropdown.classList.toggle('show');
             }
         }
-
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
 
         // Initialize select2 for better dropdowns
         $(document).ready(function() {
