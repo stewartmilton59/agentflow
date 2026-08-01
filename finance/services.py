@@ -125,6 +125,34 @@ def get_net_profit(start=None, end=None):
     return get_gross_profit(start, end) - get_expenses_total(start, end)
 
 
+def get_cash_received(start=None, end=None):
+    """Actual money received in the period (all sale payments + credit repayments)."""
+    qs = Payment.objects.all()
+    if start:
+        qs = qs.filter(created_at__date__gte=start)
+    if end:
+        qs = qs.filter(created_at__date__lte=end)
+    return _d(qs.aggregate(t=Sum('amount'))['t'])
+
+
+def get_real_cogs(start=None, end=None):
+    """Cost of ALL goods that left the shop in the period (completed + credit sales)."""
+    qs = SaleItem.objects.filter(
+        product__isnull=False,
+        sale__status__in=['completed', 'pending'],
+    )
+    if start:
+        qs = qs.filter(sale__sale_date__date__gte=start)
+    if end:
+        qs = qs.filter(sale__sale_date__date__lte=end)
+
+    cogs = ZERO
+    for item in qs.select_related('product'):
+        purchase_price = item.product.purchase_price if item.product.purchase_price else ZERO
+        cogs += (item.quantity * purchase_price)
+    return cogs
+
+
 def get_period_profit_report(start=None, end=None):
     """Realized profit breakdown for a date range (revenue/COGS/gross/expenses/net)."""
     revenue = get_revenue(start, end)
@@ -132,6 +160,13 @@ def get_period_profit_report(start=None, end=None):
     gross = revenue - cogs
     expenses = get_expenses_total(start, end)
     net = gross - expenses
+    credit_collected = get_credit_collected(start, end)
+
+    # Cash-based "real" profit: money actually received minus goods that left minus expenses.
+    cash_received = get_cash_received(start, end)
+    real_cogs = get_real_cogs(start, end)
+    real_profit = cash_received - real_cogs - expenses
+
     return {
         'start': start,
         'end': end,
@@ -140,8 +175,13 @@ def get_period_profit_report(start=None, end=None):
         'gross_profit': gross,
         'expenses': expenses,
         'net_profit': net,
+        'credit_collected': credit_collected,
+        'cash_received': cash_received,
+        'real_cogs': real_cogs,
+        'real_profit': real_profit,
         'sales_count': get_sales_count(start, end),
         'margin': (net / revenue * 100) if revenue else ZERO,
+        'real_margin': (real_profit / cash_received * 100) if cash_received else ZERO,
     }
 
 

@@ -107,9 +107,11 @@ def finance_dashboard_view(request):
         {'key': 'year', 'label': 'This Year', 'sub': 'Year to date', 'report': profit_year},
     ]
     for period in profit_periods:
-        for k in ('revenue', 'cogs', 'gross_profit', 'expenses', 'net_profit'):
+        for k in ('revenue', 'cogs', 'gross_profit', 'expenses', 'net_profit',
+                  'credit_collected', 'cash_received', 'real_cogs', 'real_profit'):
             period['report'][k] = float(period['report'][k])
         period['report']['margin'] = float(period['report']['margin'])
+        period['report']['real_margin'] = float(period['report']['real_margin'])
 
     credit_given = services.get_total_credit_given(start, end)
     credit_collected = services.get_credit_collected(start, end)
